@@ -3,9 +3,18 @@
 #include <rws/RobWorkStudio.hpp>
 
 #include <QPushButton>
-
+#include <fstream>
+/*
 #include <rw/loaders/ImageLoader.hpp>
 #include <rw/loaders/WorkCellFactory.hpp>
+
+#include <rw/kinematics/State.hpp>
+#include <rw/math/Q.hpp>
+#include <rw/common/Ptr.hpp>
+#include <rw/models/Device.hpp>
+#include <rw/kinematics/Frame.hpp>
+#include <rw/math/Transform3D.hpp>
+*/
 
 using namespace rw::common;
 using namespace rw::graphics;
@@ -55,6 +64,16 @@ void SamplePlugin::initialize() {
 	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/exchizz/SDU/Skole/7.Semester/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
 	getRobWorkStudio()->setWorkCell(wc);
 
+
+        std::ifstream infile("../motions/MarkerMotionSlow.txt");
+
+	int x, y, z, r, p, yaw;
+        while (infile >> x >> y >> z >> r >> p >> yaw){
+                log().info() << "x: " << x << " y: " << y << " z: " << z << std::endl;
+        }
+
+
+
 	// Load Lena image
 	Mat im, image;
 	im = imread("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
@@ -73,7 +92,7 @@ void SamplePlugin::open(WorkCell* workcell)
 	_state = _wc->getDefaultState();
 
     _device = _wc->findDevice(_device_name);
-    if(device == nullptr) {
+    if(_device == NULL) {
         RW_THROW("Device " << _device_name << " was not found!");
     }
 
@@ -162,7 +181,7 @@ void SamplePlugin::btnPressed() {
 	}
 }
 
-rw::math::VelocityScrew6D<double> calculateDeltaU(rw::math::Transform3D<double> baseTtool, rw::math::Transform3D<double> baseTtool_desired) {
+rw::math::VelocityScrew6D<double> SamplePlugin::calculateDeltaU(rw::math::Transform3D<double> baseTtool, rw::math::Transform3D<double> baseTtool_desired) {
     // Calculate dp
     rw::math::Vector3D<double> dp = baseTtool_desired.P() - baseTtool.P();
 
@@ -172,7 +191,7 @@ rw::math::VelocityScrew6D<double> calculateDeltaU(rw::math::Transform3D<double> 
     return rw::math::VelocityScrew6D<double>(dp, dw);
 }
 
-rw::math::Q algorithm1(const rw::models::Device::Ptr device, rw::kinematics::State state, const rw::kinematics::Frame* tool,
+rw::math::Q SamplePlugin::algorithm1(const rw::models::Device::Ptr device, rw::kinematics::State state, const rw::kinematics::Frame* tool,
                        const rw::math::Transform3D<double> baseTtool_desired, const rw::math::Q q_in) {
     auto baseTtool = device->baseTframe(tool, state);
     auto deltaU = calculateDeltaU(baseTtool, baseTtool_desired);
@@ -207,25 +226,24 @@ void SamplePlugin::timer() {
 
         // NOTE test code start NOTE
         // Get configuration, q
-        auto q_cur = device->getQ(_state);
+        auto q_cur = _device->getQ(_state);
         // Get transformation T_base_camera
-        const auto baseTcamera = device->baseTframe(cameraFrame, _state);
+        const auto baseTcamera = _device->baseTframe(cameraFrame, _state);
 
         // Choose a small positional change, deltaP (ca. 10^-4)
         const double delta{0.0001};
         const rw::math::Vector3D<double> deltaP(delta, delta, delta);
 
         // Choose baseTtool_desired by adding the positional change deltaP to the position part of baseTtool
-        const auto deltaPdesired = baseTtool.P() + deltaP;
-        const rw::math::Transform3D<double> baseTtool_desired(deltaPdesired, baseTtool.R());
+        const auto deltaPdesired = baseTcamera.P() + deltaP;
+        const rw::math::Transform3D<double> baseTcamera_desired(deltaPdesired, baseTcamera.R());
 
         // Apply algorithm 1
-        auto q_desired = algorithm1(device, _state, tool_frame, baseTtool_desired, q_cur);
-
+        auto q_desired = algorithm1(_device, _state, cameraFrame, baseTcamera_desired, q_cur);
         // Set device to calculated configuration
-        device->setQ(q_desired, _state);
+        _device->setQ(q_desired, _state);
+        getRobWorkStudio()->setState(_state);
         // NOTE test code end NOTE
-
 		// Show in QLabel
 		QImage img(imflip.data, imflip.cols, imflip.rows, imflip.step, QImage::Format_RGB888);
 		QPixmap p = QPixmap::fromImage(img);

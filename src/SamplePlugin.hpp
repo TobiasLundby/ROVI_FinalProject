@@ -5,9 +5,11 @@
 
 #include <opencv2/opencv.hpp>
 
-#include <rws/RobWorkStudioPlugin.hpp>
 
-#include <rw/kinematics/State.hpp>
+#include <rws/RobWorkStudioPlugin.hpp>
+#include <rw/rw.hpp>
+
+//#include <rw/kinematics/State.hpp>
 #include <rwlibs/opengl/RenderImage.hpp>
 #include <rwlibs/simulation/GLFrameGrabber.hpp>
 
@@ -27,7 +29,6 @@ public:
 
 	rw::math::VelocityScrew6D<double> calculateDeltaU(rw::math::Transform3D<double> baseTtool, rw::math::Transform3D<double> baseTtool_desired);
 	rw::math::Q algorithm1(const rw::models::Device::Ptr device, rw::kinematics::State state, const rw::kinematics::Frame* tool, const rw::math::Transform3D<double> baseTtool_desired, const rw::math::Q q_in);
-
 private slots:
 	void btnPressed();
 	void timer();
