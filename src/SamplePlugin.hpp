@@ -4,6 +4,7 @@
 #include "../build/ui_SamplePlugin.h"
 
 #include <opencv2/opencv.hpp>
+#include <vector>
 
 
 #include <rws/RobWorkStudioPlugin.hpp>
@@ -12,6 +13,25 @@
 //#include <rw/kinematics/State.hpp>
 #include <rwlibs/opengl/RenderImage.hpp>
 #include <rwlibs/simulation/GLFrameGrabber.hpp>
+
+
+class Pose{
+public:
+		double x;
+		double y;
+		double z;
+		double r;
+		double p;
+		double yaw;
+	Pose(double x, double y, double z, double r, double p, double yaw){
+		this->x = x;
+		this->y = y;
+		this->z = z;
+		this->r = r;
+		this->p = p;
+		this->yaw = yaw;
+	}
+};
 
 class SamplePlugin: public rws::RobWorkStudioPlugin, private Ui::SamplePlugin
 {
@@ -38,6 +58,7 @@ private slots:
 private:
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 
+	std::vector<Pose> motionVector;
 	QTimer* _timer;
 
 	rw::models::WorkCell::Ptr _wc;

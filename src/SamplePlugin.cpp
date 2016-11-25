@@ -65,13 +65,22 @@ void SamplePlugin::initialize() {
 	getRobWorkStudio()->setWorkCell(wc);
 
 
-        std::ifstream infile("../motions/MarkerMotionSlow.txt");
+  std::ifstream infile("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/motions/MarkerMotionSlow.txt");
+  if (infile.is_open()) {
+    log().info() << "Motion file open" << std::endl;
+  } else {
+    log().info() << "motion file NOT open" << std::endl;
+  }
+	double x, y, z, r, p, yaw;
 
-	int x, y, z, r, p, yaw;
-        while (infile >> x >> y >> z >> r >> p >> yaw){
-                log().info() << "x: " << x << " y: " << y << " z: " << z << std::endl;
-        }
 
+  std::string line;
+  while (std::getline(infile, line)){
+    std::istringstream iss(line);
+    iss >> x >> y >> z >> r >> p >> yaw;
+
+    motionVector.push_back( Pose(x,y,z,r,p,yaw) );
+  }
 
 
 	// Load Lena image
@@ -209,6 +218,19 @@ rw::math::Q SamplePlugin::algorithm1(const rw::models::Device::Ptr device, rw::k
 }
 
 void SamplePlugin::timer() {
+  static int i = 0;
+  i++;
+
+  // NOTE updates marker position with respect to base
+  MovableFrame* _MarkerFrame = (MovableFrame*) _wc->findFrame("Marker");
+  rw::math::Vector3D<> tempPos(motionVector[i].x, motionVector[i].y, motionVector[i].z);
+
+  rw::math::RPY<> tempRot(motionVector[i].r, motionVector[i].p, motionVector[i].yaw);
+
+  rw::math::Transform3D<double> MarkerTransform3D(tempPos, tempRot.toRotation3D());
+
+  _MarkerFrame ->setTransform(MarkerTransform3D, _state);
+
 	if (_framegrabber != NULL) {
 		// Get the image as a RW image
 		Frame* cameraFrame = _wc->findFrame("CameraSim");
