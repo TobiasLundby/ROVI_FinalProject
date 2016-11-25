@@ -25,6 +25,9 @@ public:
 
 	virtual void initialize();
 
+	rw::math::VelocityScrew6D<double> calculateDeltaU(rw::math::Transform3D<double> baseTtool, rw::math::Transform3D<double> baseTtool_desired);
+	rw::math::Q algorithm1(const rw::models::Device::Ptr device, rw::kinematics::State state, const rw::kinematics::Frame* tool, const rw::math::Transform3D<double> baseTtool_desired, const rw::math::Q q_in);
+
 private slots:
 	void btnPressed();
 	void timer();
@@ -40,6 +43,9 @@ private:
 	rw::kinematics::State _state;
 	rwlibs::opengl::RenderImage *_textureRender, *_bgRender;
 	rwlibs::simulation::GLFrameGrabber* _framegrabber;
+
+	const std::string _device_name = "PA10";
+	rw::models::Device::Ptr _device;
 };
 
 #endif /*RINGONHOOKPLUGIN_HPP_*/
