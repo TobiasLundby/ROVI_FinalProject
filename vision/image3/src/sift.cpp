@@ -52,24 +52,6 @@ static bool lineIntersection(const cv::Point2f &a1, const cv::Point2f &b1, const
     return false;
 }
 
-
-bool intersection(Point2f o1, Point2f p1, Point2f o2, Point2f p2,
-                      Point2f &r)
-{
-    Point2f x = o2 - o1;
-    Point2f d1 = p1 - o1;
-    Point2f d2 = p2 - o2;
-
-
-    float cross = d1.x*d2.y - d1.y*d2.x;
-    if (abs(cross) < /*EPS*/1e-8)
-        return false;
-
-    double t1 = (x.x * d2.y - x.y * d2.x)/cross;
-    r = o1 + d1 * t1;
-    return true;
-}
-
 int main(int argc, char** argv){
  initModule_nonfree();
  Mat img_scene, img_object;
@@ -86,7 +68,7 @@ int main(int argc, char** argv){
  string s = ss.str();
 
  std::cout << "opening: " << "marker_corny/marker_corny_" +s +  ".png" << std::endl;
- img_object = imread("marker_corny/marker_corny_" +s +  ".png", CV_LOAD_IMAGE_COLOR);
+ img_object = imread("marker_corny/marker_corny_" + s +  ".png", CV_LOAD_IMAGE_COLOR);
  if(img_object.empty()){
      cout << "can not open" << endl;
      return 0;
