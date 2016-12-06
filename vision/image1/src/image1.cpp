@@ -9,6 +9,8 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <string>
+#include <iostream>
+#include <iomanip>
 namespace patch
 {
     template < typename T > std::string to_string( const T& n )
@@ -27,7 +29,7 @@ using namespace cv;
 #define HUE_YELLOW     30                      /* 22-38 */
 #define HUE_GREEN      60                      /* 38-75 */
 #define HUE_BLUE       100                      /* 75-130 */
-#define HUE_BLUE_OWN   120                      /* 75-130 */
+#define HUE_BLUE_OWN   115                      /* 75-130 */
 #define HUE_VIOLET     145                      /* 130-160 */
 #define HUE_RED        160                      /* 160-179 */
 
@@ -35,20 +37,21 @@ using namespace cv;
 Mat image;
 
 int hsv_h_base        = HUE_BLUE_OWN;
-int hsv_h_sensitivity = 20; // 5 for big green led and 24 for most other
+int hsv_h_sensitivity = 25; // 5 for big green led and 24 for most other
 int hsv_h_low         = hsv_h_base - hsv_h_sensitivity; //hsv_h_base - hsv_h_sensitivity;
 int hsv_h_upper       = hsv_h_base + hsv_h_sensitivity;//hsv_h_base + hsv_h_sensitivity;
-int hsv_s_low         = 50; //100;
+int hsv_s_low         = 0; //100;
 int hsv_s_upper       = 255;
 int hsv_v_low         = 50; //100;
 int hsv_v_upper       = 255;
 
-int dilate_color_iterations = 0; //  effect not tested
+int dilate_color_iterations = 1; //  effect not tested
 
 SimpleBlobDetector::Params params;
 Ptr<SimpleBlobDetector> detector;
 
-void on_trackbar( int, void* )
+// void on_trackbar( int, void* )
+void on_trackbar()
 {
 
   Mat image_hsv, image_gray, image_masked;
@@ -59,7 +62,7 @@ void on_trackbar( int, void* )
   Mat mask;
   inRange(image_hsv, Scalar(hsv_h_low,hsv_s_low,hsv_v_low), Scalar(hsv_h_upper, hsv_s_upper, hsv_v_upper), mask); // Find the areas which contain the color. 1st arg: inpur frame; 2nd arg: the lower HSV limits; 3rd arg: the upper HSV limits; 4th arg: the output mask.
   for (size_t i = 0; i < dilate_color_iterations; i++)
-    dilate(mask, mask, Mat(), Point(-1,-1)); // Enhance the red areas in the image
+    dilate(mask, mask, Mat(), Point(-1,-1)); // Enhance the areas in the image
   image_gray.copyTo(image_masked, mask);
 
   // Detect blobs.
@@ -74,6 +77,8 @@ void on_trackbar( int, void* )
     for (size_t i = 0; i < keypoints.size(); i++) {
       putText(im_with_keypoints,  patch::to_string(i), keypoints[i].pt,
       FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+      std::cout << "Keypoint " << patch::to_string(i) << " has size " << patch::to_string(keypoints[i].size) << std::endl;
+      line(im_with_keypoints, keypoints[i].pt, Point(keypoints[i].pt.x+(keypoints[i].size/2),keypoints[i].pt.y), cvScalar(0,127,255));
     }
   }
   imshow("Display Image", image);
@@ -101,12 +106,12 @@ int main(int argc, char **argv) {
   //params.maxThreshold = 100;
   params.blobColor = 255; // This parameter is used instead of the threadholds to detect the white color
   // Filter by Area.
-  params.filterByArea = false;
-  //params.minArea = 5;
-  //params.maxArea = 600;
+  params.filterByArea = true;
+  params.minArea = 9000;
+  params.maxArea = 13000;
   // Filter by Circularity - we do not do this parameter due to motion blur
-  params.filterByCircularity = false;
-  //params.minCircularity = 0.5;
+  params.filterByCircularity = true;
+  params.minCircularity = 0.8;
   // Filter by Convexity - we do not use this parameter to ensure detection
   params.filterByConvexity = false;
   //params.minConvexity = 0.87;
@@ -122,12 +127,25 @@ int main(int argc, char **argv) {
   namedWindow("Trackbars", CV_WINDOW_AUTOSIZE );
 
   //createTrackbar( "Rho:", "Hough line detection", &hough_rho, hough_rho_max, on_trackbar );
-  createTrackbar("HUE LOW", "Trackbars", &hsv_h_low, 255, on_trackbar);
-  createTrackbar("HUE UPPER", "Trackbars", &hsv_h_upper, 255, on_trackbar);
-  createTrackbar("SATURATION LOW", "Trackbars", &hsv_s_low, 255, on_trackbar);
-  createTrackbar("SATURATION UPPER", "Trackbars", &hsv_s_upper, 255, on_trackbar);
-  createTrackbar("VIBRANCE LOW", "Trackbars", &hsv_v_low, 255, on_trackbar);
-  createTrackbar("VIBRANCE UPPER", "Trackbars", &hsv_v_upper, 255, on_trackbar);
+  createTrackbar("HUE LOW", "Trackbars", &hsv_h_low, 255);
+  createTrackbar("HUE UPPER", "Trackbars", &hsv_h_upper, 255);
+  createTrackbar("SATURATION LOW", "Trackbars", &hsv_s_low, 255);
+  createTrackbar("SATURATION UPPER", "Trackbars", &hsv_s_upper, 255);
+  createTrackbar("VIBRANCE LOW", "Trackbars", &hsv_v_low, 255);
+  createTrackbar("VIBRANCE UPPER", "Trackbars", &hsv_v_upper, 255);
+
+  waitKey(3000);
+
+  for (size_t i = 1; i < 30; i++) {
+    std::stringstream ss;
+    ss << std::setw(2) << std::setfill('0') << i;
+    std::string s = ss.str();
+
+    std::cout << "opening: " << "marker_color_" +s +  ".png" << std::endl;
+    image = imread("../../sequences/marker_color/marker_color_" + s +  ".png", 1);
+    on_trackbar();
+    waitKey(0);
+  }
 
   waitKey(0);
   return 0;
