@@ -18,31 +18,119 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="QPushButton" name="_btn0">
+       <widget class="QLabel" name="label">
         <property name="text">
-         <string>PushButton0</string>
+         <string>Select marker</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="_btn1">
+       <widget class="QComboBox" name="_drop_markerselect">
+        <item>
+         <property name="text">
+          <string>Marker1.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Marker2a.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Marker2b.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Marker3.ppm</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>PushButton1</string>
+         <string>Select sequence</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="_checkBox">
-        <property name="text">
-         <string>CheckBox</string>
+       <widget class="QComboBox" name="_drop_sequenceselect">
+        <item>
+         <property name="text">
+          <string>MarkerMotionSlow.txt</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>MarkerMotionMedium.txt</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>MarkerMotionFast.txt</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QSpinBox" name="_spinBox"/>
+       <widget class="QPushButton" name="_btnStart">
+        <property name="text">
+         <string>Start sequence</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="_btnStop">
+        <property name="text">
+         <string>Stop sequence</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="_btnRestart">
+        <property name="text">
+         <string>Restart sequence</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Go to frame in sequence</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="_spinBox">
+        <property name="maximum">
+         <number>50</number>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QSlider" name="_slider">
+        <property name="maximum">
+         <number>500</number>
+        </property>
+        <property name="pageStep">
+         <number>1</number>
+        </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>

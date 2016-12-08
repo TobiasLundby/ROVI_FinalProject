@@ -5,6 +5,10 @@
 
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <rws/RobWorkStudio.hpp>
+
+#include <QPushButton>
+#include <fstream>
 
 
 #include <rws/RobWorkStudioPlugin.hpp>
@@ -53,10 +57,14 @@ private slots:
 	void btnPressed();
 	void timer();
 
+	void dropSequenceChanged(QString value);
+	void dropMarkerChanged(QString value);
+
 	void stateChangedListener(const rw::kinematics::State& state);
 
 private:
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
+	int i = 0;
 
 	std::vector<Pose> motionVector;
 	QTimer* _timer;

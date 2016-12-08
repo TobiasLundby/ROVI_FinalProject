@@ -1,9 +1,5 @@
 #include "SamplePlugin.hpp"
 
-#include <rws/RobWorkStudio.hpp>
-
-#include <QPushButton>
-#include <fstream>
 /*
 #include <rw/loaders/ImageLoader.hpp>
 #include <rw/loaders/WorkCellFactory.hpp>
@@ -29,18 +25,24 @@ using namespace rws;
 
 using namespace cv;
 
-SamplePlugin::SamplePlugin():
-    RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_icon.png"))
-{
+SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_icon.png")){
 	setupUi(this);
 
 	_timer = new QTimer(this);
-    connect(_timer, SIGNAL(timeout()), this, SLOT(timer()));
+  connect(_timer, SIGNAL(timeout()), this, SLOT(timer()));
 
 	// now connect stuff from the ui component
-	connect(_btn0    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
-	connect(_btn1    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
+	connect(_btnStart    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
+	connect(_btnStop    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
+  connect(_btnRestart    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
+
 	connect(_spinBox  ,SIGNAL(valueChanged(int)), this, SLOT(btnPressed()) );
+  connect(_slider  ,SIGNAL(valueChanged(int)), this, SLOT(btnPressed()) );
+
+  // Dropdowns
+  connect(_drop_sequenceselect  ,SIGNAL(currentIndexChanged(QString )), this, SLOT(dropSequenceChanged(QString)) );
+  connect(_drop_markerselect  ,SIGNAL(currentIndexChanged(QString )), this, SLOT(dropMarkerChanged(QString)) );
+
 
 	Image textureImage(300,300,Image::GRAY,Image::Depth8U);
 	_textureRender = new RenderImage(textureImage);
@@ -49,6 +51,45 @@ SamplePlugin::SamplePlugin():
 	_framegrabber = NULL;
 }
 
+void SamplePlugin::dropMarkerChanged(QString val){
+  auto value = val.toUtf8().constData();
+  std::string path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/markers/";
+
+
+  log().info() << "Marker changed to" << path + value << "\n";
+  // Set a new texture (one pixel = 1 mm)
+  Image::Ptr imageMarker = ImageLoader::Factory::load(path + value);
+  _textureRender->setImage(*imageMarker);
+  getRobWorkStudio()->updateAndRepaint();
+}
+
+void SamplePlugin::dropSequenceChanged(QString val){
+  auto value = val.toUtf8().constData();
+  std::string path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/motions/";
+
+
+  std::ifstream infile(path + value);
+  if (infile.is_open()) {
+    log().info() << "Motion file open" << std::endl;
+  } else {
+    log().info() << "motion file NOT open" << std::endl;
+  }
+	double x, y, z, r, p, yaw;
+
+
+  std::string line;
+  motionVector.clear(); // Removing existing items in vector
+
+  while (std::getline(infile, line)){
+    std::istringstream iss(line);
+    iss >> x >> y >> z >> r >> p >> yaw;
+
+    motionVector.push_back( Pose(x,y,z,r,p,yaw) );
+  }
+  _slider->setMaximum(motionVector.size() -1);
+  _spinBox->setMaximum(motionVector.size() - 1);
+
+}
 SamplePlugin::~SamplePlugin()
 {
 	delete _textureRender;
@@ -64,24 +105,9 @@ void SamplePlugin::initialize() {
 	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/exchizz/SDU/Skole/7.Semester/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
 	getRobWorkStudio()->setWorkCell(wc);
 
-
-  std::ifstream infile("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/motions/MarkerMotionSlow.txt");
-  if (infile.is_open()) {
-    log().info() << "Motion file open" << std::endl;
-  } else {
-    log().info() << "motion file NOT open" << std::endl;
-  }
-	double x, y, z, r, p, yaw;
-
-
-  std::string line;
-  while (std::getline(infile, line)){
-    std::istringstream iss(line);
-    iss >> x >> y >> z >> r >> p >> yaw;
-
-    motionVector.push_back( Pose(x,y,z,r,p,yaw) );
-  }
-
+  // Load default marker and sequence
+  dropMarkerChanged("Marker1.ppm");
+  dropSequenceChanged("MarkerMotionSlow.txt");
 
 	// Load Lena image
 	Mat im, image;
@@ -169,24 +195,25 @@ Mat SamplePlugin::toOpenCVImage(const Image& img) {
 
 void SamplePlugin::btnPressed() {
 	QObject *obj = sender();
-	if(obj==_btn0){
-		log().info() << "Button 0\n";
-		// Set a new texture (one pixel = 1 mm)
-		Image::Ptr image;
-		image = ImageLoader::Factory::load("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/markers/Marker3.ppm");
-		_textureRender->setImage(*image);
-		image = ImageLoader::Factory::load("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/backgrounds/color3.ppm");
-		_bgRender->setImage(*image);
-		getRobWorkStudio()->updateAndRepaint();
-	} else if(obj==_btn1){
-		log().info() << "Button 1\n";
-		// Toggle the timer on and off
-		if (!_timer->isActive())
+  if(obj == _slider){
+    i = _slider->value() - 1;
+  } else if(obj==_btnRestart){
+    log().info() << "Restarting sequence\n";
+    i = 0;
+  } else if(obj==_btnStart){
+    log().info() << "Starting timer\n";
+    if (!_timer->isActive()){
 		    _timer->start(100); // run 10 Hz
-		else
+    }
+	} else if(obj==_btnStop){
+		log().info() << "Stopping timer\n";
+		// Toggle the timer on and off
+		if (_timer->isActive()){
 			_timer->stop();
+    }
 	} else if(obj==_spinBox){
-		log().info() << "spin value:" << _spinBox->value() << "\n";
+		log().info() << "Jumping to frame: " << _spinBox->value() << "\n";
+    i = _spinBox->value() -1; // -1 since next frame update will then be the frame we want to see
 	}
 }
 
@@ -218,17 +245,18 @@ rw::math::Q SamplePlugin::algorithm1(const rw::models::Device::Ptr device, rw::k
 }
 
 void SamplePlugin::timer() {
-  static int i = 0;
   i++;
+
+  if(i == motionVector.size()-1){
+    std::cout << "Reached end of sequence" << std::endl;
+    _timer->stop();
+  }
 
   // NOTE updates marker position with respect to base
   MovableFrame* _MarkerFrame = (MovableFrame*) _wc->findFrame("Marker");
   rw::math::Vector3D<> tempPos(motionVector[i].x, motionVector[i].y, motionVector[i].z);
-
   rw::math::RPY<> tempRot(motionVector[i].r, motionVector[i].p, motionVector[i].yaw);
-
   rw::math::Transform3D<double> MarkerTransform3D(tempPos, tempRot.toRotation3D());
-
   _MarkerFrame ->setTransform(MarkerTransform3D, _state);
 
 	if (_framegrabber != NULL) {
