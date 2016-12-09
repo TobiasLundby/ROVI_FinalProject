@@ -60,15 +60,14 @@ int main(int argc, char** argv){
      cout << "can not open" << endl;
      return -1;
  }
- for(int i = 1; i < 20; i++){
+ for(int i = 1; i < 50; i++){
 
 
  stringstream ss;
  ss << setw(2) << setfill('0') << i;
  string s = ss.str();
 
- std::cout << "opening: " << "marker_corny/marker_corny_" +s +  ".png" << std::endl;
- img_object = imread("marker_corny/marker_corny_" + s +  ".png", CV_LOAD_IMAGE_COLOR);
+ img_object = imread("marker_corny_hard/marker_corny_hard_" + s +  ".png", CV_LOAD_IMAGE_COLOR);
  if(img_object.empty()){
      cout << "can not open" << endl;
      return 0;

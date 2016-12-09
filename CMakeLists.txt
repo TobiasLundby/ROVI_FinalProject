@@ -3,6 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6.0)
 
 ADD_DEFINITIONS(
     -std=c++11 # Or -std=c++0x
+    -w
     # Other flags
 )
 # The name of the project.
@@ -44,10 +45,20 @@ LINK_DIRECTORIES( ${ROBWORKSTUDIO_LIBRARY_DIRS} )
 # Use OpenCV
 #SET(OpenCV_DIR ${OpenCV_ROOT}/cmake) #USING FIND PACKAGE
 MESSAGE("-- OpenCV root: " ${OpenCV_ROOT})
-FIND_PACKAGE(OpenCV REQUIRED)
-INCLUDE_DIRECTORIES( ${OpenCV_INCLUDE_DIRS} )
-LINK_DIRECTORIES( ${OpenCV_LIB_DIR} )
-MESSAGE("-- OpenCV dir: " ${OpenCV_DIR})
+
+#FIND_PACKAGE(OpenCV REQUIRED)
+#INCLUDE_DIRECTORIES( ${OpenCV_INCLUDE_DIRS} )
+#LINK_DIRECTORIES( ${OpenCV_LIB_DIR} )
+
+
+find_package(OpenCV REQUIRED PATHS /opt/opencv/release NO_DEFAULT_PATH)
+if(OpenCV_FOUND)
+   message("Found OpenCV")
+   message("Includes: " ${OpenCV_INCLUDE_DIRS})
+   message("-- OpenCV dir: " ${OpenCV_DIR})
+endif(OpenCV_FOUND)
+
+
 
 # Set the output dir for generated libraries and binaries
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ROOT}/bin/${CMAKE_BUILD_TYPE}" CACHE PATH "Runtime directory" FORCE)
@@ -62,7 +73,7 @@ QT4_WRAP_CPP(MocSrcFiles src/SamplePlugin.hpp)
 QT4_ADD_RESOURCES(RccSrcFiles src/resources.qrc)
 
 # Add the source files to build (besides the Qt generated source files)
-SET(SrcFiles src/SamplePlugin.cpp)
+SET(SrcFiles src/SamplePlugin.cpp src/functions.cpp src/SIFTDetector.cpp)
 
 # The shared library to build:
 ADD_LIBRARY(SamplePlugin MODULE ${SrcFiles} ${UIS_OUT_H} ${MocSrcFiles} ${RccSrcFiles})

@@ -1,17 +1,5 @@
 #include "SamplePlugin.hpp"
 
-/*
-#include <rw/loaders/ImageLoader.hpp>
-#include <rw/loaders/WorkCellFactory.hpp>
-
-#include <rw/kinematics/State.hpp>
-#include <rw/math/Q.hpp>
-#include <rw/common/Ptr.hpp>
-#include <rw/models/Device.hpp>
-#include <rw/kinematics/Frame.hpp>
-#include <rw/math/Transform3D.hpp>
-*/
-
 using namespace rw::common;
 using namespace rw::graphics;
 using namespace rw::kinematics;
@@ -27,9 +15,10 @@ using namespace cv;
 
 SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_icon.png")){
 	setupUi(this);
-
+  //Robotics
 	_timer = new QTimer(this);
   connect(_timer, SIGNAL(timeout()), this, SLOT(timer()));
+
 
 	// now connect stuff from the ui component
 	connect(_btnStart    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
@@ -53,14 +42,24 @@ SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_
 
 void SamplePlugin::dropMarkerChanged(QString val){
   auto value = val.toUtf8().constData();
-  std::string path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/markers/";
-
-
-  log().info() << "Marker changed to" << path + value << "\n";
+  currentMarker = value;
+  std::string marker = marker_path + value;
+  std::cout << "Marker changed to" << marker << "\n";
   // Set a new texture (one pixel = 1 mm)
-  Image::Ptr imageMarker = ImageLoader::Factory::load(path + value);
+  Image::Ptr imageMarker = ImageLoader::Factory::load(marker);
   _textureRender->setImage(*imageMarker);
   getRobWorkStudio()->updateAndRepaint();
+
+   // Vision
+   Mat image((*imageMarker).getHeight(),(*imageMarker).getWidth(), CV_8UC3);
+   image.data = (uchar*)(*imageMarker).getImageData();
+
+   cvtColor(image, image, CV_BGR2GRAY);
+
+   if(image.empty()){
+     std::cout << "Can not open image" << marker << std::endl;
+   }
+  siftdetector = new SIFTDetector(image);
 }
 
 void SamplePlugin::dropSequenceChanged(QString val){
@@ -70,9 +69,9 @@ void SamplePlugin::dropSequenceChanged(QString val){
 
   std::ifstream infile(path + value);
   if (infile.is_open()) {
-    log().info() << "Motion file open" << std::endl;
+    std::cout << "Motion file open" << path + value << std::endl;
   } else {
-    log().info() << "motion file NOT open" << std::endl;
+    std::cout << "motion file NOT open" << path + value  << std::endl;
   }
 	double x, y, z, r, p, yaw;
 
@@ -88,7 +87,7 @@ void SamplePlugin::dropSequenceChanged(QString val){
   }
   _slider->setMaximum(motionVector.size() -1);
   _spinBox->setMaximum(motionVector.size() - 1);
-
+  std::cout << "vector size: " <<  motionVector.size() << std::endl;
 }
 SamplePlugin::~SamplePlugin()
 {
@@ -105,10 +104,6 @@ void SamplePlugin::initialize() {
 	WorkCell::Ptr wc = WorkCellLoader::Factory::load("/home/exchizz/SDU/Skole/7.Semester/ROVI/PA10WorkCell/ScenePA10RoVi1.wc.xml");
 	getRobWorkStudio()->setWorkCell(wc);
 
-  // Load default marker and sequence
-  dropMarkerChanged("Marker1.ppm");
-  dropSequenceChanged("MarkerMotionSlow.txt");
-
 	// Load Lena image
 	Mat im, image;
 	im = imread("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/src/lena.bmp", CV_LOAD_IMAGE_COLOR); // Read the file
@@ -118,10 +113,14 @@ void SamplePlugin::initialize() {
 	}
 	QImage img(image.data, image.cols, image.rows, image.step, QImage::Format_RGB888); // Create QImage from the OpenCV image
 	_label->setPixmap(QPixmap::fromImage(img)); // Show the image at the label in the plugin
+
+
+  // Load default marker and sequence
+  dropMarkerChanged("Marker1.ppm");
+  dropSequenceChanged("MarkerMotionSlow.txt");
 }
 
-void SamplePlugin::open(WorkCell* workcell)
-{
+void SamplePlugin::open(WorkCell* workcell){
 	log().info() << "OPEN" << "\n";
 	_wc = workcell;
 	_state = _wc->getDefaultState();
@@ -188,7 +187,7 @@ void SamplePlugin::close() {
 }
 
 Mat SamplePlugin::toOpenCVImage(const Image& img) {
-	Mat res(img.getHeight(),img.getWidth(), CV_8SC3);
+	Mat res(img.getHeight(),img.getWidth(), CV_8UC3);
 	res.data = (uchar*)img.getImageData();
 	return res;
 }
@@ -204,6 +203,8 @@ void SamplePlugin::btnPressed() {
     log().info() << "Starting timer\n";
     if (!_timer->isActive()){
 		    _timer->start(100); // run 10 Hz
+        Image::Ptr image = ImageLoader::Factory::load("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/backgrounds/color3.ppm");
+        _bgRender->setImage(*image);
     }
 	} else if(obj==_btnStop){
 		log().info() << "Stopping timer\n";
@@ -246,7 +247,6 @@ rw::math::Q SamplePlugin::algorithm1(const rw::models::Device::Ptr device, rw::k
 
 void SamplePlugin::timer() {
   i++;
-
   if(i == motionVector.size()-1){
     std::cout << "Reached end of sequence" << std::endl;
     _timer->stop();
@@ -270,7 +270,23 @@ void SamplePlugin::timer() {
 		Mat imflip;
 		cv::flip(im, imflip, 0);
 
+
         // NOTE our code goes here!
+
+				if (currentMarker == "Marker3.ppm"){
+        	Mat imgtmp;
+        	cvtColor(imflip, imgtmp, CV_BGR2GRAY);
+        	auto corners = siftdetector->GetCornersOfMarkerInScene(imgtmp);
+
+        	Point2f center_point;
+        	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
+          	std::cout << "Could not find SIFT intersection" << std::endl;
+        	}
+        	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
+				} else if (currentMarker == "Marker1.ppm"){
+					std::cout << "not implemented yet" << std::endl;
+				}
+
         // _wc appears to be a variable used for the workcell (set in open)
         // _state appears to be a variable used for the state (set to default _wc state in open)
 

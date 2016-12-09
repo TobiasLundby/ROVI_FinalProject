@@ -6,17 +6,19 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <rws/RobWorkStudio.hpp>
-
 #include <QPushButton>
 #include <fstream>
-
-
 #include <rws/RobWorkStudioPlugin.hpp>
 #include <rw/rw.hpp>
 
 //#include <rw/kinematics/State.hpp>
 #include <rwlibs/opengl/RenderImage.hpp>
 #include <rwlibs/simulation/GLFrameGrabber.hpp>
+
+//Vision
+#include "functions.hpp"
+#include "SIFTDetector.hpp"
+
 
 
 class Pose{
@@ -42,6 +44,13 @@ class SamplePlugin: public rws::RobWorkStudioPlugin, private Ui::SamplePlugin
 Q_OBJECT
 Q_INTERFACES( rws::RobWorkStudioPlugin )
 public:
+	// Vision
+	SIFTDetector * siftdetector;
+
+  std::string marker_path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/markers/";
+
+
+	//Robotics
 	SamplePlugin();
 	virtual ~SamplePlugin();
 
@@ -65,6 +74,7 @@ private slots:
 private:
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 	int i = 0;
+	std::string currentMarker;
 
 	std::vector<Pose> motionVector;
 	QTimer* _timer;
@@ -76,6 +86,7 @@ private:
 
 	const std::string _device_name = "PA10";
 	rw::models::Device::Ptr _device;
+
 };
 
 #endif /*RINGONHOOKPLUGIN_HPP_*/
