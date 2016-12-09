@@ -11,6 +11,7 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
+
 namespace patch
 {
     template < typename T > std::string to_string( const T& n )
@@ -29,7 +30,7 @@ using namespace cv;
 #define HUE_YELLOW     30                      /* 22-38 */
 #define HUE_GREEN      60                      /* 38-75 */
 #define HUE_BLUE       100                      /* 75-130 */
-#define HUE_BLUE_OWN   115                      /* 75-130 */
+#define HUE_BLUE_OWN   120                      /* 75-130 */
 #define HUE_VIOLET     145                      /* 130-160 */
 #define HUE_RED        160                      /* 160-179 */
 
@@ -40,9 +41,9 @@ int hsv_h_base        = HUE_BLUE_OWN;
 int hsv_h_sensitivity = 25; // 5 for big green led and 24 for most other
 int hsv_h_low         = hsv_h_base - hsv_h_sensitivity; //hsv_h_base - hsv_h_sensitivity;
 int hsv_h_upper       = hsv_h_base + hsv_h_sensitivity;//hsv_h_base + hsv_h_sensitivity;
-int hsv_s_low         = 0; //100;
+int hsv_s_low         = 30; //100;
 int hsv_s_upper       = 255;
-int hsv_v_low         = 50; //100;
+int hsv_v_low         = 30; //100;
 int hsv_v_upper       = 255;
 
 int dilate_color_iterations = 1; //  effect not tested
@@ -69,6 +70,73 @@ void on_trackbar()
   std::vector<KeyPoint> keypoints;
   detector->detect( mask, keypoints);
 
+  Mat image_circle;
+  //image.copyTo(image_circle);
+  image_circle = Mat::zeros(image.size(), image.type());
+  if (keypoints.size()) {
+    Scalar mm;
+    std::vector< int > elements_first_search;
+    std::vector< Scalar > elements_first_search_means;
+    for (size_t i = 0; i < keypoints.size(); i++) {
+      Mat mask_tmp = Mat::zeros(image_circle.size(), CV_8U);
+
+      circle(mask_tmp, keypoints[i].pt, keypoints[i].size/2 * 1.20, Scalar::all(255), -1);
+      circle(mask_tmp, keypoints[i].pt, keypoints[i].size/2, Scalar::all(0), -1);
+
+      image.copyTo(image_circle, mask_tmp);
+
+      mm = mean(image_hsv, mask_tmp);
+      std::cout << mm[0] << "\t" << mm[1] << "\t" << mm[2] << std::endl;
+
+      if ( (mm[0] > 60 and mm[0] < 95) ) {
+        putText(image_circle,  patch::to_string(i), keypoints[i].pt,
+        FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,255,0), 1, CV_AA);
+        elements_first_search.push_back(i);
+        elements_first_search_means.push_back(mm);
+      } else {
+        putText(image_circle,  patch::to_string(i), keypoints[i].pt,
+        FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,0,255), 1, CV_AA);
+      }
+    }
+    if (elements_first_search.size()) {
+      int average_means_first_search_h = 0;
+      int average_means_first_search_s = 0;
+      int average_means_first_search_v = 0;
+      int average_means_first_search_size = 0;
+      for (size_t i = 0; i < elements_first_search_means.size(); i++) {
+        average_means_first_search_h += elements_first_search_means.at(i)[0];
+        average_means_first_search_s += elements_first_search_means.at(i)[1];
+        average_means_first_search_v += elements_first_search_means.at(i)[2];
+        average_means_first_search_size += keypoints[elements_first_search[i]].size;
+      }
+      average_means_first_search_h = average_means_first_search_h / elements_first_search_means.size();
+      average_means_first_search_s = average_means_first_search_s / elements_first_search_means.size();
+      average_means_first_search_v = average_means_first_search_v / elements_first_search_means.size();
+      average_means_first_search_size = average_means_first_search_size / elements_first_search_means.size();
+      std::cout << "Average h: " << average_means_first_search_h << std::endl;
+      std::cout << "Average s: " << average_means_first_search_s << std::endl;
+      std::cout << "Average v: " << average_means_first_search_v << std::endl;
+      std::cout << "Average size: " << average_means_first_search_size << std::endl;
+
+      int threashold_h = 10;
+      int threashold_s = 25;
+      int threashold_v = 35;
+      int threashold_size = 25;
+
+      std::cout << "cmp: " << average_means_first_search_size*(threashold_size/100.0) << std::endl;
+
+      for (size_t i = 0; i < elements_first_search.size(); i++) {
+        if ( (elements_first_search_means.at(i)[2] > average_means_first_search_v-threashold_v and elements_first_search_means.at(i)[2] < average_means_first_search_v+threashold_v)
+          and (elements_first_search_means.at(i)[1] > average_means_first_search_s-threashold_s and elements_first_search_means.at(i)[1] < average_means_first_search_s+threashold_s)
+          and (elements_first_search_means.at(i)[0] > average_means_first_search_h-threashold_h and elements_first_search_means.at(i)[0] < average_means_first_search_h+threashold_h)
+          and (keypoints[elements_first_search[i]].size > average_means_first_search_size-average_means_first_search_size*(threashold_size/100.0) and keypoints[elements_first_search[i]].size < average_means_first_search_size+average_means_first_search_size*(threashold_size/100.0)) ) {
+          putText(image_circle,  "O", keypoints[elements_first_search[i]].pt,
+          FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,0,255), 1, CV_AA);
+        }
+      }
+    }
+    //image.copyTo(image_circle, mask_tmp);
+  }
   Mat im_with_keypoints;
   drawKeypoints( image, keypoints, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
 
@@ -81,9 +149,10 @@ void on_trackbar()
       line(im_with_keypoints, keypoints[i].pt, Point(keypoints[i].pt.x+(keypoints[i].size/2),keypoints[i].pt.y), cvScalar(0,127,255));
     }
   }
-  imshow("Display Image", image);
+  //imshow("Display Image", image);
   imshow("Display Masked", image_masked);
   imshow("Display Keypoints", im_with_keypoints);
+  imshow("Circle", image_circle);
 }
 
 int main(int argc, char **argv) {
@@ -107,11 +176,11 @@ int main(int argc, char **argv) {
   params.blobColor = 255; // This parameter is used instead of the threadholds to detect the white color
   // Filter by Area.
   params.filterByArea = true;
-  params.minArea = 9000;
-  params.maxArea = 13000;
+  params.minArea = CV_PI*pow(30,2); // Radius 50px
+  params.maxArea = CV_PI*pow(100,2); // Radius 100px
   // Filter by Circularity - we do not do this parameter due to motion blur
   params.filterByCircularity = true;
-  params.minCircularity = 0.8;
+  params.minCircularity = 0.5;
   // Filter by Convexity - we do not use this parameter to ensure detection
   params.filterByConvexity = false;
   //params.minConvexity = 0.87;
@@ -121,10 +190,11 @@ int main(int argc, char **argv) {
   //params.maxInertiaRatio = 0.5;
   detector = SimpleBlobDetector::create(params); // Set up detector with params
 
-  namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
+  //namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
   namedWindow("Display Masked", CV_WINDOW_AUTOSIZE );
   namedWindow("Display Keypoints", CV_WINDOW_AUTOSIZE );
   namedWindow("Trackbars", CV_WINDOW_AUTOSIZE );
+  namedWindow("Circle", CV_WINDOW_AUTOSIZE );
 
   //createTrackbar( "Rho:", "Hough line detection", &hough_rho, hough_rho_max, on_trackbar );
   createTrackbar("HUE LOW", "Trackbars", &hsv_h_low, 255);
@@ -136,13 +206,14 @@ int main(int argc, char **argv) {
 
   waitKey(3000);
 
-  for (size_t i = 1; i < 30; i++) {
+  for (size_t i = 1; i <= 52; i++) {
     std::stringstream ss;
     ss << std::setw(2) << std::setfill('0') << i;
     std::string s = ss.str();
 
-    std::cout << "opening: " << "marker_color_" +s +  ".png" << std::endl;
-    image = imread("../../sequences/marker_color/marker_color_" + s +  ".png", 1);
+    std::string file_id = "marker_color";
+    std::cout << "opening: " << file_id << "_" +s +  ".png" << std::endl;
+    image = imread("../../sequences/" + file_id + "/" + file_id + "_" + s +  ".png", 1);
     on_trackbar();
     waitKey(0);
   }
