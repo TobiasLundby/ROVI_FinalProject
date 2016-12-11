@@ -290,6 +290,31 @@ void SamplePlugin::timer() {
         // _wc appears to be a variable used for the workcell (set in open)
         // _state appears to be a variable used for the state (set to default _wc state in open)
 
+				// NOTE Visual servoing //
+				Jacobian Jimage(2,6);
+				// First row
+				Jimage(0,0) = -f/z;
+				Jimage(0,1) = 0;
+				Jimage(0,2) = u/z;
+				Jimage(0,3) = (u*v)/f;
+				Jimage(0,4) = -(f*f+u*u)/f
+				Jimage(0,5) = v;
+
+				// Second row
+				Jimage(1,0) = 0;
+				Jimage(1,1) = -f/z;
+				Jimage(1,2) = v/z;
+				Jimage(1,3) = (f*f+v*v)/f;
+				Jimage(1,4) = (-u*v)/f;
+				Jimage(1,5) = -u;
+
+
+
+
+				//auto J = device->baseJframe(tool, state); // Returns jacobian from tool to base frame.
+				//auto Zimage = Jimage*S*J;
+
+
         // NOTE test code start NOTE
         // Get configuration, q
         auto q_cur = _device->getQ(_state);
