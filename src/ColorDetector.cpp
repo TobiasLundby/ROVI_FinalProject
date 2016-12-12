@@ -58,13 +58,13 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
       image.copyTo(image_circle, mask_tmp);
 
       mm = mean(image_hsv, mask_tmp); // Compute mean but only of mask
-
+      std::cout << "Mean (" << i << "): " << mm[0] << std::endl;
       if ( (mm[0] > 60 and mm[0] < 95) ) {
         elements_first_search.push_back(i);
         elements_first_search_means.push_back(mm);
       }
     }
-    
+
     // Filter markers 2nd run
     if (elements_first_search.size()) {
       // Compute average mean and avg marker size
@@ -85,11 +85,20 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
 
       // Threasholds for average filtering
       int threashold_h = 10;
-      int threashold_s = 25;
-      int threashold_v = 35;
+      int threashold_s = 40;
+      int threashold_v = 40;
       int threashold_size = 25;
 
+      std::cout << "avg h: " << average_means_first_search_h << std::endl;
+      std::cout << "avg s: " << average_means_first_search_s << std::endl;
+      std::cout << "avg v: " << average_means_first_search_v << std::endl;
+      std::cout << "avg size: " << average_means_first_search_size << std::endl;
+
       for (size_t i = 0; i < elements_first_search.size(); i++) {
+        std::cout << "avg (" << i << ")h: " << elements_first_search_means.at(i)[0] << std::endl;
+        std::cout << "avg (" << i << ")s: " << elements_first_search_means.at(i)[1] << std::endl;
+        std::cout << "avg (" << i << ")v: " << elements_first_search_means.at(i)[2] << std::endl;
+        std::cout << "avg (" << i << ")size: " << keypoints_MB[elements_first_search[i]].size << std::endl << std::endl;
         if ( (elements_first_search_means.at(i)[2] > average_means_first_search_v-threashold_v and elements_first_search_means.at(i)[2] < average_means_first_search_v+threashold_v)
           and (elements_first_search_means.at(i)[1] > average_means_first_search_s-threashold_s and elements_first_search_means.at(i)[1] < average_means_first_search_s+threashold_s)
           and (elements_first_search_means.at(i)[0] > average_means_first_search_h-threashold_h and elements_first_search_means.at(i)[0] < average_means_first_search_h+threashold_h)

@@ -311,6 +311,8 @@ void SamplePlugin::timer() {
 						circle(imflip, interest_points.at(3), 30, Scalar( 127, 127, 127), 10);
 					}
 
+				} else {
+					imwrite("failed_detecion.png",imflip );
 				}
 
         // _wc appears to be a variable used for the workcell (set in open)
