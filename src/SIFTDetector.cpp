@@ -54,10 +54,12 @@ std::vector<Point2f> SIFTDetector::GetCornersOfMarkerInScene(Mat &img_scene){
   //-- small)
   std::vector< DMatch > good_matches;
   for( int i = 0; i < descriptors_marker.rows; i++ ){
-    if( matches[i].distance <= max(2*min_dist, 0.02) ){
+    if( matches[i].distance <= max(3*min_dist, 0.025) ){
        good_matches.push_back( matches[i]);
     }
   }
+
+  std::cout << "good matches: " << good_matches.size() << std::endl;
   if(good_matches.size() == 0){
     std::cout << "returning, good_matches: 0" << std::endl;
     std::vector<Point2f> out;

@@ -335,10 +335,9 @@ void SamplePlugin::timer() {
 				dudv[0] = -u;
 				dudv[1] = -v;
 
-				olddudv = dudv;
 				Jacobian Jimage(2,6);
 
-				//First row
+				// First row
 				Jimage(0,0) = -f/z;
 				Jimage(0,1) = 0;
 				Jimage(0,2) = u/z;

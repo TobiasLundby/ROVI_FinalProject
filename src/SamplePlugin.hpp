@@ -79,7 +79,6 @@ private:
 	//Robotics
 	bool firstrun = true;
 
-  Eigen::Vector2d olddudv;
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 	int i = 0;
 	std::string currentMarker;
