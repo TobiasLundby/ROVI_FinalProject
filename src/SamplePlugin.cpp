@@ -89,8 +89,7 @@ void SamplePlugin::dropSequenceChanged(QString val){
   _spinBox->setMaximum(motionVector.size() - 1);
   std::cout << "vector size: " <<  motionVector.size() << std::endl;
 }
-SamplePlugin::~SamplePlugin()
-{
+SamplePlugin::~SamplePlugin(){
 	delete _textureRender;
 	delete _bgRender;
 }
@@ -272,7 +271,6 @@ void SamplePlugin::timer() {
 
 
         // NOTE our code goes here!
-
 				if (currentMarker == "Marker3.ppm"){
         	Mat imgtmp;
         	cvtColor(imflip, imgtmp, CV_BGR2GRAY);
@@ -291,13 +289,35 @@ void SamplePlugin::timer() {
         // _state appears to be a variable used for the state (set to default _wc state in open)
 
 				// NOTE Visual servoing //
+				int oldx = motionVector[i-1].x;
+				int oldy = motionVector[i-1].y;
+
+				int newx = motionVector[i].x;
+				int newy = motionVector[i].y;
+				//motionVector[i].z
+
+
+				Eigen::Vector2d dudv;
+				dudv[0] = newx - oldx;
+				dudv[1] = newy - oldy;
+
+				std::cout << newx << " - " << oldx << std::endl;;
+
+				float V = newx;
+				float U = newy;
+
+				float u = U - 1024/2;
+				float v = V - 768/2;
 				Jacobian Jimage(2,6);
+
+				float f = 823;
+				float z = 0.5;
 				// First row
 				Jimage(0,0) = -f/z;
 				Jimage(0,1) = 0;
 				Jimage(0,2) = u/z;
 				Jimage(0,3) = (u*v)/f;
-				Jimage(0,4) = -(f*f+u*u)/f
+				Jimage(0,4) = -(f*f+u*u)/f;
 				Jimage(0,5) = v;
 
 				// Second row
@@ -309,12 +329,35 @@ void SamplePlugin::timer() {
 				Jimage(1,5) = -u;
 
 
+				// Gets R from base to tool
+				MovableFrame* _ToolFrame = (MovableFrame*) _wc->findFrame("Tool");
+				//auto TToolWorld = _ToolFrame->wTf(_state);
+				auto TToolWorld = _device->baseTframe(_ToolFrame, _state);
+				/* Calculate S*/
+				auto RBaseTool = TToolWorld.R().inverse();
+				auto S = Jacobian(RBaseTool);
+
+				/* Robot Jacobian */
+				auto J = _device->baseJframe(_ToolFrame, _state); // Returns jacobian from tool to base frame.
 
 
-				//auto J = device->baseJframe(tool, state); // Returns jacobian from tool to base frame.
-				//auto Zimage = Jimage*S*J;
+				auto Zimage = (Jimage*S*J).e();
+				int rows =  Zimage.rows();
+				int cols =  Zimage.cols();
+				//printf("cols: %d, rows: %d \n", cols, rows);
 
+				auto ZimageT = Zimage.transpose();
+				// (Zimage*(Zimage.e().transpose())); //.inverse()*dudv;
 
+				auto dq = (ZimageT * (Zimage*ZimageT).inverse())*dudv;
+
+				auto q_cur = _device->getQ(_state);
+				q_cur += Q(dq);
+
+				rows =  dq.rows();
+				cols =  dq.cols();
+				printf("cols: %d, rows: %d \n", cols, rows);
+/*
         // NOTE test code start NOTE
         // Get configuration, q
         auto q_cur = _device->getQ(_state);
@@ -332,7 +375,8 @@ void SamplePlugin::timer() {
         // Apply algorithm 1
         auto q_desired = algorithm1(_device, _state, cameraFrame, baseTcamera_desired, q_cur);
         // Set device to calculated configuration
-        _device->setQ(q_desired, _state);
+				*/
+        _device->setQ(q_cur, _state);
         getRobWorkStudio()->setState(_state);
         // NOTE test code end NOTE
 		// Show in QLabel

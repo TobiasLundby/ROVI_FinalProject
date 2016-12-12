@@ -4,6 +4,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6.0)
 ADD_DEFINITIONS(
     -std=c++11 # Or -std=c++0x
     -w
+    -Ofast
     # Other flags
 )
 # The name of the project.
