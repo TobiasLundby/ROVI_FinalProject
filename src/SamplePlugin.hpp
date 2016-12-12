@@ -45,8 +45,6 @@ class SamplePlugin: public rws::RobWorkStudioPlugin, private Ui::SamplePlugin
 Q_OBJECT
 Q_INTERFACES( rws::RobWorkStudioPlugin )
 public:
-	// Vision
-	SIFTDetector * siftdetector;
 
   std::string marker_path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/markers/";
 
@@ -73,6 +71,15 @@ private slots:
 	void stateChangedListener(const rw::kinematics::State& state);
 
 private:
+
+	// Vision
+	SIFTDetector * siftdetector;
+	ColorDetector * marker1detector;
+
+	//Robotics
+	bool firstrun = true;
+
+  Eigen::Vector2d olddudv;
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 	int i = 0;
 	std::string currentMarker;

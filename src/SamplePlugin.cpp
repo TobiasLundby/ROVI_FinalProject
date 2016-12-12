@@ -61,7 +61,7 @@ void SamplePlugin::dropMarkerChanged(QString val){
    }
   siftdetector = new SIFTDetector(image);
 
-	ColorDetector = marker1detector;
+	marker1detector = new ColorDetector();
 }
 
 void SamplePlugin::dropSequenceChanged(QString val){
@@ -247,7 +247,6 @@ rw::math::Q SamplePlugin::algorithm1(const rw::models::Device::Ptr device, rw::k
 }
 
 void SamplePlugin::timer() {
-  i++;
   if(i == motionVector.size()-1){
     std::cout << "Reached end of sequence" << std::endl;
     _timer->stop();
@@ -259,8 +258,19 @@ void SamplePlugin::timer() {
   rw::math::RPY<> tempRot(motionVector[i].r, motionVector[i].p, motionVector[i].yaw);
   rw::math::Transform3D<double> MarkerTransform3D(tempPos, tempRot.toRotation3D());
   _MarkerFrame ->setTransform(MarkerTransform3D, _state);
+	i++;
 
 	if (_framegrabber != NULL) {
+
+
+		if(firstrun){
+			firstrun = false;
+			rw::math::Q q_initial(7,0,-0.65,0,1.80,0,0.42,0);
+			_device->setQ(q_initial, _state);
+			getRobWorkStudio()->setState(_state);
+		}
+
+
 		// Get the image as a RW image
 		Frame* cameraFrame = _wc->findFrame("CameraSim");
 		_framegrabber->grab(cameraFrame, _state);
@@ -270,58 +280,65 @@ void SamplePlugin::timer() {
 		Mat im = toOpenCVImage(image);
 		Mat imflip;
 		cv::flip(im, imflip, 0);
-
-
+		Point2f center_point;
+		std::cout << "i: " << i << std::endl;
         // NOTE our code goes here!
 				if (currentMarker == "Marker3.ppm"){
         	Mat imgtmp;
         	cvtColor(imflip, imgtmp, CV_BGR2GRAY);
         	auto corners = siftdetector->GetCornersOfMarkerInScene(imgtmp);
 
-        	Point2f center_point;
         	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
           	std::cout << "Could not find SIFT intersection" << std::endl;
         	}
         	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
 				} else if (currentMarker == "Marker1.ppm"){
 					//std::cout << "not implemented yet" << std::endl;
-					auto interest_points = marker1detector.ColorDetector(imflip);
+					cvtColor(imflip, imflip, COLOR_BGR2RGB);
 
-					Point2f center_point;
-        	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
-          	std::cout << "Could not find SIFT intersection" << std::endl;
-        	}
-        	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
+					imwrite("from_camera.png", imflip);
+					auto interest_points = marker1detector->FindMarker(imflip);
+
+					if (interest_points.size()) {
+	        	if(!lineIntersection(interest_points[0], interest_points[1], interest_points[3], interest_points[2], center_point)){
+	          	std::cout << "Could not find SIFT intersection" << std::endl;
+	        	}
+						std::cout << "Points " << interest_points.size() << std::endl;
+	        	circle(imflip, center_point, 30, Scalar( 255, 0, 0), 10);
+						circle(imflip, interest_points.at(0), 30, Scalar( 127, 127, 127), 10);
+						circle(imflip, interest_points.at(1), 30, Scalar( 127, 127, 127), 10);
+						circle(imflip, interest_points.at(2), 30, Scalar( 127, 127, 127), 10);
+						circle(imflip, interest_points.at(3), 30, Scalar( 127, 127, 127), 10);
+					}
+
 				}
 
         // _wc appears to be a variable used for the workcell (set in open)
         // _state appears to be a variable used for the state (set to default _wc state in open)
 
+
 				// NOTE Visual servoing //
-				int oldx = motionVector[i-1].x;
-				int oldy = motionVector[i-1].y;
-
-				int newx = motionVector[i].x;
-				int newy = motionVector[i].y;
-				//motionVector[i].z
-
-
-				Eigen::Vector2d dudv;
-				dudv[0] = newx - oldx;
-				dudv[1] = newy - oldy;
-
-				std::cout << newx << " - " << oldx << std::endl;;
-
-				float V = newx;
-				float U = newy;
-
-				float u = U - 1024/2;
-				float v = V - 768/2;
-				Jacobian Jimage(2,6);
 
 				float f = 823;
 				float z = 0.5;
 				// First row
+
+				float V = center_point.y;
+				float U = center_point.x;
+
+				float u = U - 1024/2;
+				float v = V - 768/2;
+
+
+				Eigen::Vector2d dudv;
+
+				dudv[0] = -u;
+				dudv[1] = -v;
+
+				olddudv = dudv;
+				Jacobian Jimage(2,6);
+
+				//First row
 				Jimage(0,0) = -f/z;
 				Jimage(0,1) = 0;
 				Jimage(0,2) = u/z;
@@ -353,19 +370,12 @@ void SamplePlugin::timer() {
 				auto Zimage = (Jimage*S*J).e();
 				int rows =  Zimage.rows();
 				int cols =  Zimage.cols();
-				//printf("cols: %d, rows: %d \n", cols, rows);
 
 				auto ZimageT = Zimage.transpose();
-				// (Zimage*(Zimage.e().transpose())); //.inverse()*dudv;
-
 				auto dq = (ZimageT * (Zimage*ZimageT).inverse())*dudv;
 
 				auto q_cur = _device->getQ(_state);
 				q_cur += Q(dq);
-
-				rows =  dq.rows();
-				cols =  dq.cols();
-				printf("cols: %d, rows: %d \n", cols, rows);
 /*
         // NOTE test code start NOTE
         // Get configuration, q

@@ -23,7 +23,7 @@ ColorDetector::ColorDetector(){
   detector = SimpleBlobDetector::create(params); // Set up detector with params
 }
 
-std::vector<Point2f> ColorDetector(Mat &image) {
+std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
   // Create / convert images to color spaces for processing
   Mat image_hsv, image_gray;
   cvtColor(image, image_hsv,  COLOR_BGR2HSV); // Convert from BGR to HSV
@@ -136,9 +136,12 @@ std::vector<Point2f> ColorDetector(Mat &image) {
     dilate(mask_MR, mask_MR, Mat(), Point(-1,-1)); // Enhance the areas in the image
   image_gray.copyTo(image_masked_MR, mask_MR);
 
+
   // Detect blobs.
   std::vector<KeyPoint> keypoints_MR;
   detector->detect( mask_MR, keypoints_MR);
+
+
 
   // Filter keypoints
   double min_dist_MR;
@@ -154,21 +157,27 @@ std::vector<Point2f> ColorDetector(Mat &image) {
         min_dist_MR = tmp_min_dist_MR;
       }
     }
+
+    // Save keypoints
+    keypoints_MR_final.push_back( keypoints_MR.at(min_dist_id) );
+    keypoints_combined.push_back( keypoints_MR.at(min_dist_id) );
   }
-  // Save keypoints
-  keypoints_MR_final.push_back( keypoints_MR.at(min_dist_id) );
-  keypoints_combined.push_back( keypoints_MR.at(min_dist_id) );
+
+
+
 
   // Sort markers in the right order
   int MB1_id = 0;
-  int MB1_x = keypoints_MB_final.at(0).pt.x;
   int MB2_id = 0;
-  int MB2_y = keypoints_MB_final.at(0).pt.y;
   int MB3_id = 0;
-  int MB3_x = keypoints_MB_final.at(0).pt.x;
-  int MB3_y = keypoints_MB_final.at(0).pt.y;
 
   if (keypoints_MR_final.size() == 1) {
+    int MB1_x = keypoints_MB_final.at(0).pt.x;
+    int MB2_y = keypoints_MB_final.at(0).pt.y;
+    int MB3_x = keypoints_MB_final.at(0).pt.x;
+    int MB3_y = keypoints_MB_final.at(0).pt.y;
+
+
     if (keypoints_MR_final.at(0).pt.x <= center_MB.x
         and keypoints_MR_final.at(0).pt.y <= center_MB.y) { // Red Marker is at left top
       if (keypoints_MB_final.at(MB1_id).pt.y > keypoints_MR_final.at(0).pt.y) { // Match blue marker 1

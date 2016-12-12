@@ -18,7 +18,7 @@ using namespace cv;
 class ColorDetector {
 public:
   ColorDetector();
-  std::vector<Point2f> ColorDetector(Mat &image);
+  std::vector<Point2f> FindMarker(Mat &image);
 private:
   int dilate_color_iterations = 1;
 
@@ -40,8 +40,8 @@ private:
   int hsv_h_sensitivity_MR = 15; // 5 for big green led and 24 for most other
   int hsv_h_low_MR         = hsv_h_base_MR - hsv_h_sensitivity_MR; //hsv_h_base - hsv_h_sensitivity;
   int hsv_h_upper_MR       = hsv_h_base_MR + hsv_h_sensitivity_MR;//hsv_h_base + hsv_h_sensitivity;
-  int hsv_s_low_MR         = 80; //100;
-  int hsv_s_upper_MR       = 230;
-  int hsv_v_low_MR         = 90; //100;
-  int hsv_v_upper_MR       = 210;
+  int hsv_s_low_MR         = 30; //100;
+  int hsv_s_upper_MR       = 255;
+  int hsv_v_low_MR         = 40; //100;
+  int hsv_v_upper_MR       = 255;
 };
