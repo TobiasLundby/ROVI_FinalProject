@@ -18,6 +18,7 @@
 //Vision
 #include "functions.hpp"
 #include "SIFTDetector.hpp"
+#include "ColorDetector.hpp"
 
 
 

@@ -60,6 +60,8 @@ void SamplePlugin::dropMarkerChanged(QString val){
      std::cout << "Can not open image" << marker << std::endl;
    }
   siftdetector = new SIFTDetector(image);
+
+	ColorDetector = marker1detector;
 }
 
 void SamplePlugin::dropSequenceChanged(QString val){
@@ -282,7 +284,14 @@ void SamplePlugin::timer() {
         	}
         	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
 				} else if (currentMarker == "Marker1.ppm"){
-					std::cout << "not implemented yet" << std::endl;
+					//std::cout << "not implemented yet" << std::endl;
+					auto interest_points = marker1detector.ColorDetector(imflip);
+
+					Point2f center_point;
+        	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
+          	std::cout << "Could not find SIFT intersection" << std::endl;
+        	}
+        	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
 				}
 
         // _wc appears to be a variable used for the workcell (set in open)
