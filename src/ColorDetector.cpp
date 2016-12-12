@@ -63,6 +63,8 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
         elements_first_search.push_back(i);
         elements_first_search_means.push_back(mm);
       }
+    } else {
+      std::cout << "Not enough detections, line 67 ColorDetector.cpp" << std::endl;
     }
     // Filter markers 2nd run
     if (elements_first_search.size()) {
