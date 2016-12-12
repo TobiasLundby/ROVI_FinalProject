@@ -99,17 +99,23 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
         }
       }
     }
+  } else {
+    std::cout << "Not enough detections, line 103 ColorDetector.cpp" << std::endl;
   }
 
   // Calculate center of the blue markers
   double centerX_MB = 0;
   double centerY_MB = 0;
-  for (size_t i = 0; i < keypoints_MB_final.size(); i++) {
-    centerX_MB += keypoints_MB_final[i].pt.x;
-    centerY_MB += keypoints_MB_final[i].pt.y;
+  if (keypoints_MB_final.size()) {
+    for (size_t i = 0; i < keypoints_MB_final.size(); i++) {
+      centerX_MB += keypoints_MB_final[i].pt.x;
+      centerY_MB += keypoints_MB_final[i].pt.y;
+    }
+    centerX_MB /= keypoints_MB_final.size();
+    centerY_MB /= keypoints_MB_final.size();
+  } else {
+    std::cout << "Not enough detections, line 115 ColorDetector.cpp" << std::endl;
   }
-  centerX_MB /= keypoints_MB_final.size();
-  centerY_MB /= keypoints_MB_final.size();
   Point_<double> center_MB(centerX_MB,centerY_MB);
 
   // Shift hue values to color seperate better for red
@@ -141,8 +147,6 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
   std::vector<KeyPoint> keypoints_MR;
   detector->detect( mask_MR, keypoints_MR);
 
-
-
   // Filter keypoints
   double min_dist_MR;
   int min_dist_id;
@@ -161,6 +165,8 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
     // Save keypoints
     keypoints_MR_final.push_back( keypoints_MR.at(min_dist_id) );
     keypoints_combined.push_back( keypoints_MR.at(min_dist_id) );
+  } else {
+    std::cout << "Not enough detections, line 165 ColorDetector.cpp" << std::endl;
   }
 
 
@@ -171,12 +177,11 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
   int MB2_id = 0;
   int MB3_id = 0;
 
-  if (keypoints_MR_final.size() == 1) {
+  if (keypoints_MR_final.size() == 1 and keypoints_MB_final.size() == 3) {
     int MB1_x = keypoints_MB_final.at(0).pt.x;
     int MB2_y = keypoints_MB_final.at(0).pt.y;
     int MB3_x = keypoints_MB_final.at(0).pt.x;
     int MB3_y = keypoints_MB_final.at(0).pt.y;
-
 
     if (keypoints_MR_final.at(0).pt.x <= center_MB.x
         and keypoints_MR_final.at(0).pt.y <= center_MB.y) { // Red Marker is at left top
@@ -299,6 +304,8 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
         }
       }
     }
+  } else {
+    std::cout << "Not enough detections, line 303 ColorDetector.cpp" << std::endl;
   }
 
   std::vector< Point2f > output_points; // Elements: 1=MB1, 2=MB2, 3=MB3, 4=MB4
@@ -313,6 +320,8 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
     output_points.push_back(tmp_point);
     tmp_point = keypoints_MR_final.at(0).pt;
     output_points.push_back(tmp_point);
+  } else {
+    std::cout << "Not enough detections, line 325 ColorDetector.cpp" << std::endl;
   }
 
   return output_points;

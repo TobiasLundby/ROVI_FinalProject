@@ -101,6 +101,7 @@ bool lineIntersection(const cv::Point2f &a1, const cv::Point2f &b1, const cv::Po
 // void on_trackbar( int, void* )
 void on_trackbar()
 {
+  //cvtColor(image, image, COLOR_BGR2RGB); // Convert from BGR to HSV
   // Create / convert images to color spaces for processing
   Mat image_hsv, image_gray;
   cvtColor(image, image_hsv,  COLOR_BGR2HSV); // Convert from BGR to HSV
@@ -118,6 +119,10 @@ void on_trackbar()
   std::vector<KeyPoint> keypoints_MB, keypoints_MB_final, keypoints_MR_final, keypoints_combined;
   detector->detect( mask_MB, keypoints_MB);
 
+  Mat im_with_keypoints; // removed the define here!
+  // drawKeypoints( image, keypoints_combined, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
+  // imshow("test",im_with_keypoints);
+  // waitKey(0);
   // Filter found blobs
   Mat image_circle;
   image_circle = Mat::zeros(image.size(), image.type());
@@ -221,6 +226,9 @@ void on_trackbar()
     dilate(mask_MR, mask_MR, Mat(), Point(-1,-1)); // Enhance the areas in the image
   image_gray.copyTo(image_masked_MR, mask_MR);
 
+  imshow("test",mask_MR);
+  waitKey(0);
+
   // Detect blobs.
   std::vector<KeyPoint> keypoints_MR;
   detector->detect( mask_MR, keypoints_MR);
@@ -242,24 +250,26 @@ void on_trackbar()
         min_dist_MR = tmp_min_dist_MR;
       }
     }
+    // Save keypoints
+    keypoints_MR_final.push_back( keypoints_MR.at(min_dist_id) );
+    keypoints_combined.push_back( keypoints_MR.at(min_dist_id) );
   }
-  // Save keypoints
-  keypoints_MR_final.push_back( keypoints_MR.at(min_dist_id) );
-  keypoints_combined.push_back( keypoints_MR.at(min_dist_id) );
-  Mat im_with_keypoints;
+
+  im_with_keypoints; // removed the define here!
   drawKeypoints( image, keypoints_combined, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
   //circle(im_with_keypoints, center_MB, 2, Scalar(0,127,255), 2);
 
   // Sort markers in the right order
   int MB1_id = 0;
-  int MB1_x = keypoints_MB_final.at(0).pt.x;
   int MB2_id = 0;
-  int MB2_y = keypoints_MB_final.at(0).pt.y;
   int MB3_id = 0;
-  int MB3_x = keypoints_MB_final.at(0).pt.x;
-  int MB3_y = keypoints_MB_final.at(0).pt.y;
+
 
   if (keypoints_MR_final.size() == 1) {
+    int MB1_x = keypoints_MB_final.at(0).pt.x;
+    int MB2_y = keypoints_MB_final.at(0).pt.y;
+    int MB3_x = keypoints_MB_final.at(0).pt.x;
+    int MB3_y = keypoints_MB_final.at(0).pt.y;
     if (keypoints_MR_final.at(0).pt.x <= center_MB.x
         and keypoints_MR_final.at(0).pt.y <= center_MB.y) { // Red Marker is at left top
       if (keypoints_MB_final.at(MB1_id).pt.y > keypoints_MR_final.at(0).pt.y) { // Match blue marker 1
@@ -488,14 +498,20 @@ int main(int argc, char **argv) {
 
   waitKey(3000);
 
-  for (size_t i = 1; i <= 52; i++) {
-    std::stringstream ss;
-    ss << std::setw(2) << std::setfill('0') << i;
-    std::string s = ss.str();
+  // for (size_t i = 1; i <= 52; i++) {
+  //   std::stringstream ss;
+  //   ss << std::setw(2) << std::setfill('0') << i;
+  //   std::string s = ss.str();
+  //
+  //   std::string file_id = "marker_color_hard";
+  //   std::cout << "opening: " << file_id << "_" +s +  ".png" << std::endl;
+  //   image = imread("../../sequences/" + file_id + "/" + file_id + "_" + s +  ".png", 1);
+  //   on_trackbar();
+  //   waitKey(0);
+  // }
 
-    std::string file_id = "marker_color_hard";
-    std::cout << "opening: " << file_id << "_" +s +  ".png" << std::endl;
-    image = imread("../../sequences/" + file_id + "/" + file_id + "_" + s +  ".png", 1);
+  image = imread("from-camera.png", 1);
+  while(true){
     on_trackbar();
     waitKey(0);
   }
