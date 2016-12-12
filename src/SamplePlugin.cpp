@@ -199,7 +199,17 @@ void SamplePlugin::btnPressed() {
     i = _slider->value() - 1;
   } else if(obj==_btnRestart){
     log().info() << "Restarting sequence\n";
-    i = 0;
+		i = 0;
+
+		MovableFrame* _MarkerFrame = (MovableFrame*) _wc->findFrame("Marker");
+		rw::math::Vector3D<> tempPos(motionVector[i].x, motionVector[i].y, motionVector[i].z);
+		rw::math::RPY<> tempRot(motionVector[i].r, motionVector[i].p, motionVector[i].yaw);
+		rw::math::Transform3D<double> MarkerTransform3D(tempPos, tempRot.toRotation3D());
+		_MarkerFrame ->setTransform(MarkerTransform3D, _state);
+
+		rw::math::Q q_initial(7,0,-0.65,0,1.80,0,0.42,0);
+		_device->setQ(q_initial, _state);
+		getRobWorkStudio()->setState(_state);
   } else if(obj==_btnStart){
     log().info() << "Starting timer\n";
     if (!_timer->isActive()){
