@@ -447,8 +447,7 @@ void on_trackbar()
     // timing_data << setprecision(8) << << "\n";
     long long time_end = currentTimeUs();
     timing_data.open ("timing_data.csv",std::fstream::app|std::fstream::out);
-    timing_data << std::setprecision(8) << frame_no << "," << keypoints_MB_final.size() << "," << keypoints_MR_final.size() << "," << output_points[0].x  << "," << output_points[0].y << "," << output_points[1].x << "," << output_points[1].y << "," << output_points[2].x << "," << output_points[2].x << "," << output_points[3].x << "," << output_points[3].y << "," << output_points[4].x << "," << output_points[4].y << "," << (time_end-time_start) << "\n";
-    timing_data.close();
+    timing_data << std::setprecision(8) << frame_no << "," << keypoints_MB_final.size() << "," << keypoints_MR_final.size() << "," << output_points[0].x  << "," << output_points[0].y << "," << output_points[1].x << "," << output_points[1].y << "," << output_points[2].x << "," << output_points[2].y << "," << output_points[3].x << "," << output_points[3].y << "," << output_points[4].x << "," << output_points[4].y << "," << (time_end-time_start) << "\n";    timing_data.close();
   }
 
   // Point2f center_point;
@@ -530,7 +529,7 @@ int main(int argc, char **argv) {
     ss << std::setw(2) << std::setfill('0') << i;
     std::string s = ss.str();
 
-    std::string file_id = "marker_color_hard";
+    std::string file_id = "marker_color";
     std::cout << "opening: " << file_id << "_" +s +  ".png" << std::endl;
     image = imread("../../sequences/" + file_id + "/" + file_id + "_" + s +  ".png", 1);
     on_trackbar();
