@@ -11,7 +11,10 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
+#include <time.h>       /* time */
+#include <sys/time.h>       /* time */
 
 namespace patch
 {
@@ -67,6 +70,16 @@ int hsv_s_upper_MR       = 230;
 int hsv_v_low_MR         = 90; //100;
 int hsv_v_upper_MR       = 210;
 
+std::ofstream timing_data;
+int frame_no = 0;
+
+long long currentTimeUs()
+// Timer function
+{
+    timeval current;
+    gettimeofday(&current, 0);
+    return (long long)current.tv_sec * 1000000L + current.tv_usec;
+}
 
 double maximum(double number1, double number2, double number3) {
     return std::max(std::max(number1, number2), number3);
@@ -101,6 +114,7 @@ bool lineIntersection(const cv::Point2f &a1, const cv::Point2f &b1, const cv::Po
 // void on_trackbar( int, void* )
 void on_trackbar()
 {
+  long long time_start = currentTimeUs();
   //cvtColor(image, image, COLOR_BGR2RGB); // Convert from BGR to HSV
   // Create / convert images to color spaces for processing
   Mat image_hsv, image_gray;
@@ -119,7 +133,7 @@ void on_trackbar()
   std::vector<KeyPoint> keypoints_MB, keypoints_MB_final, keypoints_MR_final, keypoints_combined;
   detector->detect( mask_MB, keypoints_MB);
 
-  Mat im_with_keypoints; // removed the define here!
+  //Mat im_with_keypoints; // removed the define here!
   // drawKeypoints( image, keypoints_combined, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
   // imshow("test",im_with_keypoints);
   // waitKey(0);
@@ -143,13 +157,13 @@ void on_trackbar()
       mm = mean(image_hsv, mask_tmp); // Compute mean but only of mask
 
       if ( (mm[0] > 60 and mm[0] < 95) ) {
-        putText(image_circle,  patch::to_string(i), keypoints_MB[i].pt,
-        FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,255,0), 1, CV_AA);
+        //putText(image_circle,  patch::to_string(i), keypoints_MB[i].pt,
+        //FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,255,0), 1, CV_AA);
         elements_first_search.push_back(i);
         elements_first_search_means.push_back(mm);
       } else {
-        putText(image_circle,  patch::to_string(i), keypoints_MB[i].pt,
-        FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,0,255), 1, CV_AA);
+        //putText(image_circle,  patch::to_string(i), keypoints_MB[i].pt,
+        //FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,0,255), 1, CV_AA);
       }
     }
     // Filter markers 2nd run
@@ -181,8 +195,8 @@ void on_trackbar()
           and (elements_first_search_means.at(i)[1] > average_means_first_search_s-threashold_s and elements_first_search_means.at(i)[1] < average_means_first_search_s+threashold_s)
           and (elements_first_search_means.at(i)[0] > average_means_first_search_h-threashold_h and elements_first_search_means.at(i)[0] < average_means_first_search_h+threashold_h)
           and (keypoints_MB[elements_first_search[i]].size > average_means_first_search_size-average_means_first_search_size*(threashold_size/100.0) and keypoints_MB[elements_first_search[i]].size < average_means_first_search_size+average_means_first_search_size*(threashold_size/100.0)) ) {
-          putText(image_circle,  "O", keypoints_MB[elements_first_search[i]].pt,
-          FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,0,255), 1, CV_AA);
+          //putText(image_circle,  "O", keypoints_MB[elements_first_search[i]].pt,
+          //FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,0,255), 1, CV_AA);
           // Save filtered keypoints for further processing
           keypoints_MB_final.push_back( keypoints_MB.at( elements_first_search.at(i) ));
           keypoints_combined.push_back( keypoints_MB.at( elements_first_search.at(i) ));
@@ -226,8 +240,8 @@ void on_trackbar()
     dilate(mask_MR, mask_MR, Mat(), Point(-1,-1)); // Enhance the areas in the image
   image_gray.copyTo(image_masked_MR, mask_MR);
 
-  imshow("test",mask_MR);
-  waitKey(0);
+//imshow("test",mask_MR);
+  //waitKey(0);
 
   // Detect blobs.
   std::vector<KeyPoint> keypoints_MR;
@@ -255,8 +269,8 @@ void on_trackbar()
     keypoints_combined.push_back( keypoints_MR.at(min_dist_id) );
   }
 
-  im_with_keypoints; // removed the define here!
-  drawKeypoints( image, keypoints_combined, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
+  //im_with_keypoints; // removed the define here!
+  //drawKeypoints( image, keypoints_combined, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
   //circle(im_with_keypoints, center_MB, 2, Scalar(0,127,255), 2);
 
   // Sort markers in the right order
@@ -400,14 +414,14 @@ void on_trackbar()
   std::vector< Point2f > output_points; // Elements: 1=MB1, 2=MB2, 3=MB3, 4=MB4, 5=center
 
   if (keypoints_MB_final.size() == 3 and keypoints_MR_final.size() == 1) {
-    putText(im_with_keypoints,  "MB1", keypoints_MB_final[MB1_id].pt,
-    FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
-    putText(im_with_keypoints,  "MB2", keypoints_MB_final[MB2_id].pt,
-    FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
-    putText(im_with_keypoints,  "MB3", keypoints_MB_final[MB3_id].pt,
-    FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
-    putText(im_with_keypoints,  "MR1", keypoints_MR_final[0].pt,
-    FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+    // putText(im_with_keypoints,  "MB1", keypoints_MB_final[MB1_id].pt,
+    // FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+    // putText(im_with_keypoints,  "MB2", keypoints_MB_final[MB2_id].pt,
+    // FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+    // putText(im_with_keypoints,  "MB3", keypoints_MB_final[MB3_id].pt,
+    // FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+    // putText(im_with_keypoints,  "MR1", keypoints_MR_final[0].pt,
+    // FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
 
     //circle(im_with_keypoints, center_MB, 2, Scalar(0,127,255), 2);
 
@@ -425,9 +439,16 @@ void on_trackbar()
     if(!lineIntersection(output_points[0], output_points[1], output_points[3], output_points[2], center_point)){
       std::cout << "Could not find intersection" << std::endl;
     } else {
-      circle(im_with_keypoints, center_point, 2, Scalar(127,0,0), 2);
+      //circle(im_with_keypoints, center_point, 2, Scalar(127,0,0), 2);
     }
     output_points.push_back(center_point);
+
+    // Save data
+    // timing_data << setprecision(8) << << "\n";
+    long long time_end = currentTimeUs();
+    timing_data.open ("timing_data.csv",std::fstream::app|std::fstream::out);
+    timing_data << std::setprecision(8) << frame_no << "," << keypoints_MB_final.size() << "," << keypoints_MR_final.size() << "," << output_points[0].x  << "," << output_points[0].y << "," << output_points[1].x << "," << output_points[1].y << "," << output_points[2].x << "," << output_points[2].x << "," << output_points[3].x << "," << output_points[3].y << "," << output_points[4].x << "," << output_points[4].y << "," << (time_end-time_start) << "\n";
+    timing_data.close();
   }
 
   // Point2f center_point;
@@ -437,7 +458,7 @@ void on_trackbar()
 
   //imshow("Display Image", image);
   //imshow("Display Masked", image_masked_MR);
-  imshow("Display Keypoints", im_with_keypoints);
+  //imshow("Display Keypoints", im_with_keypoints);
   //imshow("Circle", image_circle);
 
   //imshow("Shifted HSV", image_hsv_shifted);
@@ -481,40 +502,46 @@ int main(int argc, char **argv) {
   detector = SimpleBlobDetector::create(params); // Set up detector with params
 
   //namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
-  namedWindow("Display Masked", CV_WINDOW_AUTOSIZE );
-  namedWindow("Display Keypoints", CV_WINDOW_AUTOSIZE );
-  namedWindow("Trackbars", CV_WINDOW_AUTOSIZE );
-  namedWindow("Circle", CV_WINDOW_AUTOSIZE );
+  //namedWindow("Display Masked", CV_WINDOW_AUTOSIZE );
+  //namedWindow("Display Keypoints", CV_WINDOW_AUTOSIZE );
+  //namedWindow("Trackbars", CV_WINDOW_AUTOSIZE );
+  //namedWindow("Circle", CV_WINDOW_AUTOSIZE );
   //namedWindow("Shifted HSV", CV_WINDOW_AUTOSIZE );
   //namedWindow("Shifted BGR", CV_WINDOW_AUTOSIZE );
 
   //createTrackbar( "Rho:", "Hough line detection", &hough_rho, hough_rho_max, on_trackbar );
-  createTrackbar("HUE LOW", "Trackbars", &hsv_h_low_MR, 255);
-  createTrackbar("HUE UPPER", "Trackbars", &hsv_h_upper_MR, 255);
-  createTrackbar("SATURATION LOW", "Trackbars", &hsv_s_low_MR, 255);
-  createTrackbar("SATURATION UPPER", "Trackbars", &hsv_s_upper_MR, 255);
-  createTrackbar("VIBRANCE LOW", "Trackbars", &hsv_v_low_MR, 255);
-  createTrackbar("VIBRANCE UPPER", "Trackbars", &hsv_v_upper_MR, 255);
+  //createTrackbar("HUE LOW", "Trackbars", &hsv_h_low_MR, 255);
+  //createTrackbar("HUE UPPER", "Trackbars", &hsv_h_upper_MR, 255);
+  //createTrackbar("SATURATION LOW", "Trackbars", &hsv_s_low_MR, 255);
+  //createTrackbar("SATURATION UPPER", "Trackbars", &hsv_s_upper_MR, 255);
+  //createTrackbar("VIBRANCE LOW", "Trackbars", &hsv_v_low_MR, 255);
+  //createTrackbar("VIBRANCE UPPER", "Trackbars", &hsv_v_upper_MR, 255);
 
   waitKey(3000);
 
-  // for (size_t i = 1; i <= 52; i++) {
-  //   std::stringstream ss;
-  //   ss << std::setw(2) << std::setfill('0') << i;
-  //   std::string s = ss.str();
-  //
-  //   std::string file_id = "marker_color_hard";
-  //   std::cout << "opening: " << file_id << "_" +s +  ".png" << std::endl;
-  //   image = imread("../../sequences/" + file_id + "/" + file_id + "_" + s +  ".png", 1);
+  timing_data.open ("timing_data.csv");
+  timing_data << std::setprecision(8) << "FrameNo,NoMB,NoMR,MB1_x,MB1_y,MB2_x,MB2_y,MB3_x,MB3_y,MR1_x,MR2_y,center_x,center_y,analysis_time" << "\n";
+  timing_data.close();
+
+
+  for (size_t i = 1; i <= 52; i++) {
+    frame_no = i;
+    std::stringstream ss;
+    ss << std::setw(2) << std::setfill('0') << i;
+    std::string s = ss.str();
+
+    std::string file_id = "marker_color_hard";
+    std::cout << "opening: " << file_id << "_" +s +  ".png" << std::endl;
+    image = imread("../../sequences/" + file_id + "/" + file_id + "_" + s +  ".png", 1);
+    on_trackbar();
+    //waitKey(0);
+  }
+
+  // image = imread("from-camera.png", 1);
+  // while(true){
   //   on_trackbar();
   //   waitKey(0);
   // }
-
-  image = imread("from-camera.png", 1);
-  while(true){
-    on_trackbar();
-    waitKey(0);
-  }
 
   waitKey(0);
   return 0;
