@@ -58,7 +58,7 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
       image.copyTo(image_circle, mask_tmp);
 
       mm = mean(image_hsv, mask_tmp); // Compute mean but only of mask
-      std::cout << "Mean (" << i << "): " << mm[0] << std::endl;
+      //std::cout << "Mean (" << i << "): " << mm[0] << std::endl;
       if ( (mm[0] > 60 and mm[0] < 95) ) {
         elements_first_search.push_back(i);
         elements_first_search_means.push_back(mm);
@@ -89,16 +89,16 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
       int threashold_v = 40;
       int threashold_size = 25;
 
-      std::cout << "avg h: " << average_means_first_search_h << std::endl;
-      std::cout << "avg s: " << average_means_first_search_s << std::endl;
-      std::cout << "avg v: " << average_means_first_search_v << std::endl;
-      std::cout << "avg size: " << average_means_first_search_size << std::endl;
+      // std::cout << "avg h: " << average_means_first_search_h << std::endl;
+      // std::cout << "avg s: " << average_means_first_search_s << std::endl;
+      // std::cout << "avg v: " << average_means_first_search_v << std::endl;
+      // std::cout << "avg size: " << average_means_first_search_size << std::endl;
 
       for (size_t i = 0; i < elements_first_search.size(); i++) {
-        std::cout << "avg (" << i << ")h: " << elements_first_search_means.at(i)[0] << std::endl;
-        std::cout << "avg (" << i << ")s: " << elements_first_search_means.at(i)[1] << std::endl;
-        std::cout << "avg (" << i << ")v: " << elements_first_search_means.at(i)[2] << std::endl;
-        std::cout << "avg (" << i << ")size: " << keypoints_MB[elements_first_search[i]].size << std::endl << std::endl;
+        //std::cout << "avg (" << i << ")h: " << elements_first_search_means.at(i)[0] << std::endl;
+        //std::cout << "avg (" << i << ")s: " << elements_first_search_means.at(i)[1] << std::endl;
+        //std::cout << "avg (" << i << ")v: " << elements_first_search_means.at(i)[2] << std::endl;
+        //std::cout << "avg (" << i << ")size: " << keypoints_MB[elements_first_search[i]].size << std::endl << std::endl;
         if ( (elements_first_search_means.at(i)[2] > average_means_first_search_v-threashold_v and elements_first_search_means.at(i)[2] < average_means_first_search_v+threashold_v)
           and (elements_first_search_means.at(i)[1] > average_means_first_search_s-threashold_s and elements_first_search_means.at(i)[1] < average_means_first_search_s+threashold_s)
           and (elements_first_search_means.at(i)[0] > average_means_first_search_h-threashold_h and elements_first_search_means.at(i)[0] < average_means_first_search_h+threashold_h)
@@ -110,7 +110,7 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
       }
     }
   } else {
-    std::cout << "Not enough detections, line 103 ColorDetector.cpp" << std::endl;
+    //std::cout << "Not enough detections, line 103 ColorDetector.cpp" << std::endl;
   }
 
   // Calculate center of the blue markers
@@ -124,7 +124,7 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
     centerX_MB /= keypoints_MB_final.size();
     centerY_MB /= keypoints_MB_final.size();
   } else {
-    std::cout << "Not enough detections, line 115 ColorDetector.cpp" << std::endl;
+    //std::cout << "Not enough detections, line 115 ColorDetector.cpp" << std::endl;
   }
   Point_<double> center_MB(centerX_MB,centerY_MB);
 
@@ -176,7 +176,7 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
     keypoints_MR_final.push_back( keypoints_MR.at(min_dist_id) );
     keypoints_combined.push_back( keypoints_MR.at(min_dist_id) );
   } else {
-    std::cout << "Not enough detections, line 165 ColorDetector.cpp" << std::endl;
+    //std::cout << "Not enough detections, line 165 ColorDetector.cpp" << std::endl;
   }
 
 
@@ -315,7 +315,7 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
       }
     }
   } else {
-    std::cout << "Not enough detections, line 303 ColorDetector.cpp" << std::endl;
+    //std::cout << "Not enough detections, line 303 ColorDetector.cpp" << std::endl;
   }
 
   std::vector< Point2f > output_points; // Elements: 1=MB1, 2=MB2, 3=MB3, 4=MB4
@@ -331,7 +331,7 @@ std::vector<Point2f> ColorDetector::FindMarker(Mat &image) {
     tmp_point = keypoints_MR_final.at(0).pt;
     output_points.push_back(tmp_point);
   } else {
-    std::cout << "Not enough detections, line 325 ColorDetector.cpp" << std::endl;
+    //std::cout << "Not enough detections, line 325 ColorDetector.cpp" << std::endl;
   }
 
   return output_points;

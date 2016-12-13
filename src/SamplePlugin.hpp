@@ -72,12 +72,19 @@ private slots:
 
 private:
 
+
+  Jacobian GenerateImageJ(float u, float v);
 	// Vision
 	SIFTDetector * siftdetector;
 	ColorDetector * marker1detector;
 
-	//Robotics
+	float f = 823;
+	float z = 0.5;
+
+	// Robotics
 	bool firstrun = true;
+
+
 
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 	int i = 0;

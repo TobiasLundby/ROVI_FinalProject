@@ -256,6 +256,26 @@ rw::math::Q SamplePlugin::algorithm1(const rw::models::Device::Ptr device, rw::k
     return q;
 }
 
+
+Jacobian SamplePlugin::GenerateImageJ(float u, float v){
+	Jacobian Jimage(2,6);
+	Jimage(0,0) = -f/z;
+	Jimage(0,1) = 0;
+	Jimage(0,2) = u/z;
+	Jimage(0,3) = (u*v)/f;
+	Jimage(0,4) = -(f*f+u*u)/f;
+	Jimage(0,5) = v;
+
+	// Second row
+	Jimage(1,0) = 0;
+	Jimage(1,1) = -f/z;
+	Jimage(1,2) = v/z;
+	Jimage(1,3) = (f*f+v*v)/f;
+	Jimage(1,4) = (-u*v)/f;
+	Jimage(1,5) = -u;
+
+	return Jimage;
+}
 void SamplePlugin::timer() {
   if(i == motionVector.size()-1){
     std::cout << "Reached end of sequence" << std::endl;
@@ -325,50 +345,107 @@ void SamplePlugin::timer() {
 					imwrite("failed_detecion.png",imflip );
 				}
 
-        // _wc appears to be a variable used for the workcell (set in open)
-        // _state appears to be a variable used for the state (set to default _wc state in open)
+				// Offsets
+				rw::math::Vector3D<> Offset0(0,0,0);
+				rw::math::Vector3D<> Offset1(0.1,0,0);
+				rw::math::Vector3D<> Offset2(0,0.1,0);
 
+				rw::math::Transform3D<double> Offset0T(Offset0);
+				rw::math::Transform3D<double> Offset1T(Offset1);
+				rw::math::Transform3D<double> Offset2T(Offset2);
+
+
+				MovableFrame* _WorldFrame = (MovableFrame*) _wc->findFrame("WORLD");
+				MovableFrame* _CameraFrame = (MovableFrame*) _wc->findFrame("Camera");
+				MovableFrame* _MarkerFrame = (MovableFrame*) _wc->findFrame("Marker");
+
+
+				auto MarkerTWorld = Kinematics::frameTframe(_MarkerFrame, _WorldFrame,_state);
+				auto CameraTMarker = Kinematics::frameTframe(_CameraFrame, _MarkerFrame,_state);
+
+				auto MarkerPosition0InMarkerFrame = MarkerTWorld*MarkerTransform3D * Offset0T;
+				auto MarkerPosition1InMarkerFrame = MarkerPosition0InMarkerFrame *   Offset1T;
+				auto MarkerPosition2InMarkerFrame = MarkerPosition0InMarkerFrame *   Offset2T;
+
+				auto MarkerPosition0InCameraFrame = CameraTMarker*MarkerPosition0InMarkerFrame;
+				auto MarkerPosition1InCameraFrame = CameraTMarker*MarkerPosition1InMarkerFrame;
+				auto MarkerPosition2InCameraFrame = CameraTMarker*MarkerPosition2InMarkerFrame;
+
+
+				double x0 =  MarkerPosition0InCameraFrame.P()[0];
+				double y0 =  MarkerPosition0InCameraFrame.P()[1];
+				double x1 =  MarkerPosition1InCameraFrame.P()[0];
+				double y1 =  MarkerPosition1InCameraFrame.P()[1];
+				double x2 =  MarkerPosition2InCameraFrame.P()[0];
+				double y2 =  MarkerPosition2InCameraFrame.P()[1];
+
+				float u0 = f*x0/z;
+				float v0 = f*y0/z;
+				float u1 = f*x1/z;
+				float v1 = f*y1/z;
+				float u2 = f*x2/z;
+				float v2 = f*y2/z;
+
+				float Offsetpx = f*0.1/z;
+
+				Eigen::VectorXd dudv(2);
+				/*
+				dudv(0) = 0-u0;
+				dudv(1) = 0-v0;
+				dudv(2) = Offsetpx-u1;
+				dudv(3) = 0-v1;
+				dudv(4) = 0-u2;
+				dudv(5) = Offsetpx-v2;
+				*/
+				dudv(0) = Offsetpx-u1;
+				dudv(1) = 0 - v1;
+
+				std::cout << "offsetpx: " << Offsetpx << std::endl;
 
 				// NOTE Visual servoing //
+				// NOTE Track using vision, one point
+				//float V = center_point.y;
+				//float U = center_point.x;
+				//float u = U - 1024/2;
+				//float v = V - 768/2;
 
-				float f = 823;
-				float z = 0.5;
-				// First row
-
-				float V = center_point.y;
-				float U = center_point.x;
-
-				float u = U - 1024/2;
-				float v = V - 768/2;
-
-
-				Eigen::Vector2d dudv;
-
-				dudv[0] = -u;
-				dudv[1] = -v;
-
-				Jacobian Jimage(2,6);
+				//Track one point using markers position
+				//float u = f*x/z;
+				//float v = f*y/z;
+				//Eigen::Vector2d dudv;
+				//dudv[0] = -u;
+				//dudv[1] = -v;
 
 				// First row
-				Jimage(0,0) = -f/z;
-				Jimage(0,1) = 0;
-				Jimage(0,2) = u/z;
-				Jimage(0,3) = (u*v)/f;
-				Jimage(0,4) = -(f*f+u*u)/f;
-				Jimage(0,5) = v;
 
-				// Second row
-				Jimage(1,0) = 0;
-				Jimage(1,1) = -f/z;
-				Jimage(1,2) = v/z;
-				Jimage(1,3) = (f*f+v*v)/f;
-				Jimage(1,4) = (-u*v)/f;
-				Jimage(1,5) = -u;
+				auto Jimage0 = GenerateImageJ(u0,v0).e();
+				auto Jimage1 = GenerateImageJ(u1,v1).e();
+				auto Jimage2 = GenerateImageJ(u2,v2).e();
 
+
+				Eigen::MatrixXd JCombined(2,6);
+				//JCombined << Jimage1, Jimage2, Jimage3;
+				JCombined.row(0) << Jimage1.row(0);
+				JCombined.row(1) << Jimage1.row(1);
+
+				//JCombined.row(2) << Jimage1.row(0);
+				//JCombined.row(3) << Jimage1.row(1);
+
+				//JCombined.row(4) << Jimage2.row(0);
+				//JCombined.row(5) << Jimage2.row(1);
+
+
+				std::cout << JCombined << std::endl;
+
+
+				int cols = JCombined.cols();
+				int rows = JCombined.rows();
+				std::cout << "cols: " << cols<< " rows: " << rows << std::endl;
+
+				auto Jimage = Jacobian(JCombined);
 
 				// Gets R from base to tool
 				MovableFrame* _ToolFrame = (MovableFrame*) _wc->findFrame("Tool");
-				//auto TToolWorld = _ToolFrame->wTf(_state);
 				auto TToolWorld = _device->baseTframe(_ToolFrame, _state);
 				/* Calculate S*/
 				auto RBaseTool = TToolWorld.R().inverse();
@@ -377,10 +454,11 @@ void SamplePlugin::timer() {
 				/* Robot Jacobian */
 				auto J = _device->baseJframe(_ToolFrame, _state); // Returns jacobian from tool to base frame.
 
-
 				auto Zimage = (Jimage*S*J).e();
-				int rows =  Zimage.rows();
-				int cols =  Zimage.cols();
+				int rows1 =  Zimage.rows();
+				int cols1 =  Zimage.cols();
+
+				std::cout << "zimage: rows: " << rows1 << " cols: " << cols1 << std::endl;
 
 				auto ZimageT = Zimage.transpose();
 				auto dq = (ZimageT * (Zimage*ZimageT).inverse())*dudv;
