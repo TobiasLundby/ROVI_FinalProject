@@ -23,9 +23,12 @@ SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_
 	connect(_btnStart    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
 	connect(_btnStop    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
   connect(_btnRestart    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
+	connect(_btnNextFrame    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
 
+	// Spin and sliders
 	connect(_spinBox  ,SIGNAL(valueChanged(int)), this, SLOT(btnPressed()) );
   connect(_slider  ,SIGNAL(valueChanged(int)), this, SLOT(btnPressed()) );
+	connect(_dtslider  ,SIGNAL(valueChanged(int)), this, SLOT(sliderDt()) );
 
   // Dropdowns
   connect(_drop_sequenceselect  ,SIGNAL(currentIndexChanged(QString )), this, SLOT(dropSequenceChanged(QString)) );
@@ -39,11 +42,26 @@ SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_
 	_framegrabber = NULL;
 }
 
+
+void SamplePlugin::sliderDt(int dt){
+	this->dt = dt;
+}
+
 void SamplePlugin::dropMarkerChanged(QString val){
   auto value = val.toUtf8().constData();
   currentMarker = value;
   std::string marker = marker_path + value;
-  std::cout << "Marker changed to" << marker << "\n";
+  std::cout << "Marker changed to: " << marker << "\n";
+
+  std::cout << "debug: -" << value << "-" << std::endl;
+	if(strcmp ("Markerpose",value) == 0){
+		use_vision = false;
+		std::cout << "Returning " << std::endl;
+		return ; // Don't load marker if we use markerpose
+	} else {
+		use_vision = true;
+	}
+
   // Set a new texture (one pixel = 1 mm)
   Image::Ptr imageMarker = ImageLoader::Factory::load(marker);
   _textureRender->setImage(*imageMarker);
@@ -88,7 +106,6 @@ void SamplePlugin::dropSequenceChanged(QString val){
   }
   _slider->setMaximum(motionVector.size() -1);
   _spinBox->setMaximum(motionVector.size() - 1);
-  std::cout << "vector size: " <<  motionVector.size() << std::endl;
 }
 SamplePlugin::~SamplePlugin(){
 	delete _textureRender;
@@ -116,7 +133,7 @@ void SamplePlugin::initialize() {
 
 
   // Load default marker and sequence
-  dropMarkerChanged("Marker1.ppm");
+  dropMarkerChanged("Markerpose");
   dropSequenceChanged("MarkerMotionSlow.txt");
 }
 
@@ -225,6 +242,10 @@ void SamplePlugin::btnPressed() {
 	} else if(obj==_spinBox){
 		log().info() << "Jumping to frame: " << _spinBox->value() << "\n";
     i = _spinBox->value() -1; // -1 since next frame update will then be the frame we want to see
+	} else if(obj == _btnNextFrame){
+		std::cout << "Next frame" << std::endl;
+		i++;
+		timer();
 	}
 }
 
@@ -275,6 +296,34 @@ Jacobian SamplePlugin::GenerateImageJ(float u, float v){
 
 	return Jimage;
 }
+
+
+Q SamplePlugin::VelocityLimitReached(Q dq, float dt){
+	// static Q lastq = currentQ;
+	//
+	// // Calculate joint velocity
+  // Q diff = currentQ-lastq;
+	//
+	// // Get max velocity
+	// auto maxQvel = _device->getVelocityLimits();
+	// for(int i = 0; i < 7; i++){
+	// 	float singleQ =  diff[i];
+	// 	if(abs(singleQ) > abs(maxQvel[i])){
+	// 		std::cout << "Hit vel. limit #" << i  << std::endl;
+	// 		currentQ[i] = maxQvel[i];
+	// 	}
+	// }
+
+	auto maxQvel = _device->getVelocityLimits();
+	for(int i = 0; i < 7; i++){
+		if( abs(dq[i]) >= abs(maxQvel[i]/dt) ){
+				std::cout << "Hit vel. limit #" << i  << std::endl;
+				dq[i] = maxQvel[i]/dt;
+		}
+	}
+
+	return dq;
+}
 void SamplePlugin::timer() {
   if(i == motionVector.size()-1){
     std::cout << "Reached end of sequence" << std::endl;
@@ -312,45 +361,41 @@ void SamplePlugin::timer() {
 		Point2f center_point;
 		std::vector<Point2f> interest_points;
 		std::cout << "i: " << i << std::endl;
-        // NOTE our code goes here!
-				if (currentMarker == "Marker3.ppm"){
-        	Mat imgtmp;
-        	cvtColor(imflip, imgtmp, CV_BGR2GRAY);
-        	auto corners = siftdetector->GetCornersOfMarkerInScene(imgtmp);
 
-        	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
-          	std::cout << "Could not find SIFT intersection" << std::endl;
-        	}
-        	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
-				} else if (currentMarker == "Marker1.ppm"){
-					//std::cout << "not implemented yet" << std::endl;
-					Mat imflip_bgr;
-					cvtColor(imflip, imflip_bgr, COLOR_BGR2RGB);
+		if (currentMarker == "Marker3.ppm"){
+    	Mat imgtmp;
+    	cvtColor(imflip, imgtmp, CV_BGR2GRAY);
+    	auto corners = siftdetector->GetCornersOfMarkerInScene(imgtmp);
 
-					imwrite("from_camera.png", imflip_bgr);
-					auto interest_points1 = marker1detector->FindMarker(imflip_bgr);
-					for(auto elm: interest_points1){
-						std::cout << "found point" << std::endl;
-						interest_points.push_back(elm);
-					}
+    	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
+      	std::cout << "Could not find SIFT intersection" << std::endl;
+    	}
+    	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
+		} else if (currentMarker == "Marker1.ppm"){
+			//std::cout << "not implemented yet" << std::endl;
+			Mat imflip_bgr;
+			cvtColor(imflip, imflip_bgr, COLOR_BGR2RGB);
 
-					std::cout << "vector size: " << interest_points.size() << std::endl;
+			imwrite("from_camera.png", imflip_bgr);
+			auto interest_points1 = marker1detector->FindMarker(imflip_bgr);
+			for(auto elm: interest_points1){
+				interest_points.push_back(elm);
+			}
 
-					if (interest_points.size()) {
-	        	if(!lineIntersection(interest_points[0], interest_points[1], interest_points[3], interest_points[2], center_point)){
-	          	std::cout << "Could not find SIFT intersection" << std::endl;
-	        	}
-						std::cout << "Points " << interest_points.size() << std::endl;
-	        	circle(imflip, center_point, 5, Scalar( 255, 0, 0), -1);
-						//circle(imflip, interest_points.at(0), 5, Scalar( 127, 127, 127), -1); // Down left
-						//circle(imflip, interest_points.at(1), 5, Scalar( 127, 127, 127), -1); // Up right
-						//circle(imflip, interest_points.at(2), 5, Scalar( 127, 127, 127), -1); // Down right
-						//circle(imflip, interest_points.at(3), 5, Scalar( 127, 127, 127), -1); // Up left
-					}
+			if (interest_points.size()) {
+      	if(!lineIntersection(interest_points[0], interest_points[1], interest_points[3], interest_points[2], center_point)){
+        	std::cout << "Could not find SIFT intersection" << std::endl;
+      	}
+      	circle(imflip, center_point, 5, Scalar( 255, 0, 0), -1);
+				//circle(imflip, interest_points.at(0), 5, Scalar( 127, 127, 127), -1); // Down left
+				//circle(imflip, interest_points.at(1), 5, Scalar( 127, 127, 127), -1); // Up right
+				//circle(imflip, interest_points.at(2), 5, Scalar( 127, 127, 127), -1); // Down right
+				//circle(imflip, interest_points.at(3), 5, Scalar( 127, 127, 127), -1); // Up left
+			}
 
-				} else {
-					imwrite("failed_detecion.png",imflip );
-				}
+		} else {
+			imwrite("failed_detecion.png",imflip );
+		}
 
 				// Offsets
 				rw::math::Vector3D<> Offset0(0.125,-0.125,0);
@@ -383,10 +428,6 @@ void SamplePlugin::timer() {
 				auto MarkerPosition1InMarkerFrame = Offset1T * MarkerTWorld*MarkerTransform3D.P();
 				auto MarkerPosition2InMarkerFrame = Offset2T * MarkerTWorld*MarkerTransform3D.P();
 
-
-				std::cout << "Offset0T: " << Offset0T << std::endl;
-
-
 				auto MarkerPosition0InCameraFrame = CameraTMarker*MarkerPosition0InMarkerFrame;
 				auto MarkerPosition1InCameraFrame = CameraTMarker*MarkerPosition1InMarkerFrame;
 				auto MarkerPosition2InCameraFrame = CameraTMarker*MarkerPosition2InMarkerFrame;
@@ -396,7 +437,7 @@ void SamplePlugin::timer() {
 
 				z = MarkerPosition0InCameraFrame[2];
 
-				std::cout << "z: " << z << std::endl;
+				//std::cout << "z: " << z << std::endl;
 
 				double x0 =  MarkerPosition0InCameraFrame[0];
 				double y0 =  MarkerPosition0InCameraFrame[1];
@@ -448,34 +489,9 @@ void SamplePlugin::timer() {
 				//circle(imflip, Point2f(u1+offset_x,v1+offset_y), 30, Scalar( 127, 127, 127), 10);
 				//circle(imflip, Point2f(u2+offset_x,v2+offset_y), 30, Scalar( 127, 127, 127), 10);
 
-				//imshow("delay",imflip);
-				//waitKey(0);
-
-				// NOTE Visual servoing //
-				// NOTE Track using vision, one point
-				//float V = center_point.y;
-				//float U = center_point.x;
-				//float u = U - offset_x;
-				//float v = V - offset_y;
-
-				//Track one point using markers position
-				//float u = f*x/z;
-				//float v = f*y/z;
-				//Eigen::Vector2d dudv;
-				//dudv[0] = -u;
-				//dudv[1] = -v;
-
-				// First row
-
 				auto Jimage0 = GenerateImageJ(u0,v0).e();
 				auto Jimage1 = GenerateImageJ(u1,v1).e();
 				auto Jimage2 = GenerateImageJ(u2,v2).e();
-
-				std::cout << "jimage0 " << Jimage0 << std::endl;
-				std::cout << "------------------" << std::endl;
-				std::cout << "jimage1 " << Jimage1 << std::endl;
-				std::cout << "------------------" << std::endl;
-
 
 				Eigen::MatrixXd JCombined(6,6);
 
@@ -485,29 +501,23 @@ void SamplePlugin::timer() {
 				JCombined.row(2) << Jimage1.row(0);
 				JCombined.row(3) << Jimage1.row(1);
 
-
-				std::cout << "JCombined " << JCombined << std::endl;
-
 				JCombined.row(4) << Jimage2.row(0);
 				JCombined.row(5) << Jimage2.row(1);
-				Eigen::MatrixXd U;
-				Eigen::VectorXd Sigma;
-				Eigen::MatrixXd V;
 
 
-				rw::math::LinearAlgebra::svd(JCombined,U, Sigma, V);
+				// Eigen::MatrixXd U;
+				// Eigen::VectorXd Sigma;
+				// Eigen::MatrixXd V;
+				// rw::math::LinearAlgebra::svd(JCombined,U, Sigma, V);
+				// std::cout << " Sigma: " << Sigma << std::endl;
 
-				std::cout << " Sigma: " << Sigma << std::endl;
 
-				int cols = JCombined.cols();
-				int rows = JCombined.rows();
-				//std::cout << "cols: " << cols<< " rows: " << rows << std::endl;
-
+				// Create Jacobian
 				auto Jimage = Jacobian(JCombined);
 
-				// Gets R from base to tool
-				//MovableFrame* _ToolFrame = (MovableFrame*) _wc->findFrame("Tool");
+				// Gets transform from base to tool
 				auto TToolWorld = _device->baseTframe(_CameraFrame, _state);
+
 				/* Calculate S*/
 				auto RBaseTool = TToolWorld.R().inverse();
 				auto S = Jacobian(RBaseTool);
@@ -516,49 +526,32 @@ void SamplePlugin::timer() {
 				auto J = _device->baseJframe(_CameraFrame, _state); // Returns jacobian from tool to base frame.
 
 				auto Zimage = (Jimage*S*J).e();
-				int rows1 =  Zimage.rows();
-				int cols1 =  Zimage.cols();
-
-				//std::cout << "zimage: rows: " << rows1 << " cols: " << cols1 << std::endl;
-
 				auto ZimageT = Zimage.transpose();
 				auto Zimage_tmp = ZimageT * (Zimage*ZimageT).inverse();
 				auto dq = Zimage_tmp*dudv;
-				std::cout << "dq: " << dq << std::endl;
 
-
-				auto Vlimits =
-
+				// Get current robot configuration
 				auto q_cur = _device->getQ(_state);
-				q_cur += Q(dq);
-/*
-        // NOTE test code start NOTE
-        // Get configuration, q
-        auto q_cur = _device->getQ(_state);
-        // Get transformation T_base_camera
-        const auto baseTcamera = _device->baseTframe(cameraFrame, _state);
 
-        // Choose a small positional change, deltaP (ca. 10^-4)
-        const double delta{0.0001};
-        const rw::math::Vector3D<double> deltaP(delta, delta, delta);
+				Q dq_constrained = VelocityLimitReached(Q(dq), 0.1);
 
-        // Choose baseTtool_desired by adding the positional change deltaP to the position part of baseTtool
-        const auto deltaPdesired = baseTcamera.P() + deltaP;
-        const rw::math::Transform3D<double> baseTcamera_desired(deltaPdesired, baseTcamera.R());
 
-        // Apply algorithm 1
-        auto q_desired = algorithm1(_device, _state, cameraFrame, baseTcamera_desired, q_cur);
-        // Set device to calculated configuration
-				*/
+				// Add the change in robot configuration
+				q_cur += Q(dq_constrained);
+
+				// Set max vel.
+
+
+				// Update
         _device->setQ(q_cur, _state);
         getRobWorkStudio()->setState(_state);
-        // NOTE test code end NOTE
-		// Show in QLabel
-		QImage img(imflip.data, imflip.cols, imflip.rows, imflip.step, QImage::Format_RGB888);
-		QPixmap p = QPixmap::fromImage(img);
-		unsigned int maxW = 400;
-		unsigned int maxH = 800;
-		_label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
+
+				// Show in QLabel
+				QImage img(imflip.data, imflip.cols, imflip.rows, imflip.step, QImage::Format_RGB888);
+				QPixmap p = QPixmap::fromImage(img);
+				unsigned int maxW = 400;
+				unsigned int maxH = 800;
+				_label->setPixmap(p.scaled(maxW,maxH,Qt::KeepAspectRatio));
 	}
 }
 

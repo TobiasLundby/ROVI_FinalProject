@@ -55,6 +55,7 @@ public:
 	SamplePlugin();
 	virtual ~SamplePlugin();
 
+	Q VelocityLimitReached(Q dq, float dt);
 	virtual void open(rw::models::WorkCell* workcell);
 
 	virtual void close();
@@ -66,9 +67,9 @@ public:
 private slots:
 	void btnPressed();
 	void timer();
-
 	void dropSequenceChanged(QString value);
 	void dropMarkerChanged(QString value);
+	void sliderDt(int dt);
 
 	void stateChangedListener(const rw::kinematics::State& state);
 
@@ -79,9 +80,11 @@ private:
 	// Vision
 	SIFTDetector * siftdetector;
 	ColorDetector * marker1detector;
+	bool use_vision = false;
 
 	float f = 823;
 	float z = 0.5;
+	float dt = 1; 
 
 	// Robotics
 	bool firstrun = true;

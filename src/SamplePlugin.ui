@@ -28,6 +28,11 @@
        <widget class="QComboBox" name="_drop_markerselect">
         <item>
          <property name="text">
+          <string>Markerpose</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
           <string>Marker1.ppm</string>
          </property>
         </item>
@@ -103,7 +108,40 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="_btnNextFrame">
+        <property name="text">
+         <string>Next frame</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="Line" name="line_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>dt</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSlider" name="_dtslider">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>1000</number>
+        </property>
+        <property name="pageStep">
+         <number>5</number>
+        </property>
+        <property name="value">
+         <number>1000</number>
+        </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
