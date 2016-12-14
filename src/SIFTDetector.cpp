@@ -98,7 +98,6 @@ std::vector<Point2f> SIFTDetector::GetCornersOfMarkerInScene(Mat &img_scene){
 //  line( img_matches, scene_corners[2] + Point2f( img_scene.cols, 0), scene_corners[3] + Point2f( img_scene.cols, 0), Scalar( 0, 255, 0), 4 );
 //  line( img_matches, scene_corners[3] + Point2f( img_scene.cols, 0), scene_corners[0] + Point2f( img_scene.cols, 0), Scalar( 0, 255, 0), 4 );
 
-
   return scene_corners;
 
 /*

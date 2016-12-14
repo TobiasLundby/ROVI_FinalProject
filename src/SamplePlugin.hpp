@@ -88,6 +88,9 @@ private:
 	float z = 0.5;
 	float dt = 1000;
 
+	std::vector<Q> q_log;
+	std::vector<rw::math::Transform3D<>> tool_log;
+
 	// Robotics
 	bool firstrun = true;
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);

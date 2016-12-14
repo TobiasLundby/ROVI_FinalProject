@@ -338,6 +338,26 @@ void SamplePlugin::timer() {
   if(i == motionVector.size()-1){
     std::cout << "Reached end of sequence" << std::endl;
     _timer->stop();
+
+		ofstream file_qlog;
+		file_qlog.open ("q.csv");
+		file_qlog << "q1,q2,q3,q4,q5,q6,q7" << std::endl;
+		for(auto q: q_log){
+			for(int i = 0; i < 7;i++){
+				file_qlog << q[i] << ",";
+			}
+			file_qlog << std::endl;
+		}
+		file_qlog.close();
+
+    ofstream file_toollog;
+		file_toollog.open ("tool.csv");
+		file_toollog << "x,y,z,r,p,y" << std::endl;
+	  for(auto tool: tool_log){
+			file_toollog << tool.P()[0] << "," << tool.P()[1]<< "," << tool.P()[2] << "," << RPY<>(tool.R())[0] << "," << RPY<>(tool.R())[1] << "," << RPY<>(tool.R())[2] << std::endl;
+		}
+		file_toollog.close();
+
 		return;
   }
 
@@ -590,7 +610,9 @@ void SamplePlugin::timer() {
 				// Add the change in robot configuration
 				q_cur += Q(dq_constrained);
 
-
+				// Log robot configuration and camera-position
+				q_log.push_back(q_cur);
+				tool_log.push_back( _CameraFrame->wTf(_state) );
 
 				// Update
         _device->setQ(q_cur, _state);
