@@ -20,6 +20,8 @@
 #include "SIFTDetector.hpp"
 #include "ColorDetector.hpp"
 
+#include <rw/math/LinearAlgebra.hpp>
+
 
 
 class Pose{

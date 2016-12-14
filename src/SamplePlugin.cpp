@@ -310,6 +310,7 @@ void SamplePlugin::timer() {
 		Mat imflip;
 		cv::flip(im, imflip, 0);
 		Point2f center_point;
+		std::vector<Point2f> interest_points;
 		std::cout << "i: " << i << std::endl;
         // NOTE our code goes here!
 				if (currentMarker == "Marker3.ppm"){
@@ -327,7 +328,13 @@ void SamplePlugin::timer() {
 					cvtColor(imflip, imflip_bgr, COLOR_BGR2RGB);
 
 					imwrite("from_camera.png", imflip_bgr);
-					auto interest_points = marker1detector->FindMarker(imflip_bgr);
+					auto interest_points1 = marker1detector->FindMarker(imflip_bgr);
+					for(auto elm: interest_points1){
+						std::cout << "found point" << std::endl;
+						interest_points.push_back(elm);
+					}
+
+					std::cout << "vector size: " << interest_points.size() << std::endl;
 
 					if (interest_points.size()) {
 	        	if(!lineIntersection(interest_points[0], interest_points[1], interest_points[3], interest_points[2], center_point)){
@@ -335,10 +342,10 @@ void SamplePlugin::timer() {
 	        	}
 						std::cout << "Points " << interest_points.size() << std::endl;
 	        	circle(imflip, center_point, 5, Scalar( 255, 0, 0), -1);
-						circle(imflip, interest_points.at(0), 5, Scalar( 127, 127, 127), -1);
-						circle(imflip, interest_points.at(1), 5, Scalar( 127, 127, 127), -1);
-						circle(imflip, interest_points.at(2), 5, Scalar( 127, 127, 127), -1);
-						circle(imflip, interest_points.at(3), 5, Scalar( 127, 127, 127), -1);
+						//circle(imflip, interest_points.at(0), 5, Scalar( 127, 127, 127), -1); // Down left
+						//circle(imflip, interest_points.at(1), 5, Scalar( 127, 127, 127), -1); // Up right
+						//circle(imflip, interest_points.at(2), 5, Scalar( 127, 127, 127), -1); // Down right
+						//circle(imflip, interest_points.at(3), 5, Scalar( 127, 127, 127), -1); // Up left
 					}
 
 				} else {
@@ -346,9 +353,18 @@ void SamplePlugin::timer() {
 				}
 
 				// Offsets
-				rw::math::Vector3D<> Offset0(-0.125,-0.125,0);
+				rw::math::Vector3D<> Offset0(0.125,-0.125,0);
 				rw::math::Vector3D<> Offset1(0.125,0.125,0);
-				rw::math::Vector3D<> Offset2(-0.125,0.125,0);
+				rw::math::Vector3D<> Offset2(-0.125,-0.125,0);
+
+				// Points to be used with vision(Marker1)
+				// rw::math::Vector3D<> Offset0(0.0525,0.0525,0);
+				// rw::math::Vector3D<> Offset1(-0.0525,-0.0525,0);
+				// rw::math::Vector3D<> Offset2(-0.0525,0.0525,0);
+
+				//rw::math::Vector3D<> Offset0(0,0,0);
+				//rw::math::Vector3D<> Offset1(0.1,0,0);
+				//rw::math::Vector3D<> Offset2(0,0.1,0);
 
 				rw::math::Transform3D<double> Offset0T(Offset0);
 				rw::math::Transform3D<double> Offset1T(Offset1);
@@ -363,9 +379,13 @@ void SamplePlugin::timer() {
 				auto MarkerTWorld = Kinematics::frameTframe(_MarkerFrame, _WorldFrame,_state);
 				auto CameraTMarker = Kinematics::frameTframe(_CameraFrame, _MarkerFrame,_state);
 
-				auto MarkerPosition0InMarkerFrame = MarkerTWorld*MarkerTransform3D *   Offset0T;
-				auto MarkerPosition1InMarkerFrame = MarkerTWorld*MarkerTransform3D *   Offset1T;
-				auto MarkerPosition2InMarkerFrame = MarkerTWorld*MarkerTransform3D *   Offset2T;
+				auto MarkerPosition0InMarkerFrame = Offset0T * MarkerTWorld*MarkerTransform3D.P();
+				auto MarkerPosition1InMarkerFrame = Offset1T * MarkerTWorld*MarkerTransform3D.P();
+				auto MarkerPosition2InMarkerFrame = Offset2T * MarkerTWorld*MarkerTransform3D.P();
+
+
+				std::cout << "Offset0T: " << Offset0T << std::endl;
+
 
 				auto MarkerPosition0InCameraFrame = CameraTMarker*MarkerPosition0InMarkerFrame;
 				auto MarkerPosition1InCameraFrame = CameraTMarker*MarkerPosition1InMarkerFrame;
@@ -374,14 +394,17 @@ void SamplePlugin::timer() {
 				int offset_x = 1024/2;
 				int offset_y = 768/2;
 
+				z = MarkerPosition0InCameraFrame[2];
 
-				double x0 =  MarkerPosition0InCameraFrame.P()[0];
-				double y0 =  MarkerPosition0InCameraFrame.P()[1];
-				double x1 =  MarkerPosition1InCameraFrame.P()[0];
-				double y1 =  MarkerPosition1InCameraFrame.P()[1];
-				double x2 =  MarkerPosition2InCameraFrame.P()[0];
-				double y2 =  MarkerPosition2InCameraFrame.P()[1];
+				std::cout << "z: " << z << std::endl;
 
+				double x0 =  MarkerPosition0InCameraFrame[0];
+				double y0 =  MarkerPosition0InCameraFrame[1];
+				double x1 =  MarkerPosition1InCameraFrame[0];
+				double y1 =  MarkerPosition1InCameraFrame[1];
+				double x2 =  MarkerPosition2InCameraFrame[0];
+				double y2 =  MarkerPosition2InCameraFrame[1];
+				//
 				float u0 = f*x0/z;
 				float v0 = f*y0/z;
 				float u1 = f*x1/z;
@@ -389,64 +412,44 @@ void SamplePlugin::timer() {
 				float u2 = f*x2/z;
 				float v2 = f*y2/z;
 
-				auto Offset0InCamera = CameraTMarker.R()*Offset0 + CameraTMarker.P();
-				auto Offset1InCamera = CameraTMarker.R()*Offset1 + CameraTMarker.P();
-				auto Offset2InCamera = CameraTMarker.R()*Offset2;
+				/* Vision */
+				// std::cout << "vector size: " << interest_points.size() << std::endl;
+				// double u0 = interest_points[0].x - offset_x;
+				// double v0 = interest_points[0].y - offset_y;
+				// double u1 = interest_points[1].x - offset_x;
+				// double v1 = interest_points[1].y - offset_y;
+				// double u2 = interest_points[2].x - offset_x;
+				// double v2 = interest_points[2].y - offset_y;
 
-				std::cout << "CameraTMarker.P" << Offset0InCamera << std::endl;
+				auto Offset0InImageu = f*(-Offset0(0))/z;
+				auto Offset0InImagev = f*Offset0(1)/z;
+				auto Offset1InImageu = f*(-Offset1(0))/z;
+				auto Offset1InImagev = f*Offset1(1)/z;
+				auto Offset2InImageu = f*(-Offset2(0))/z;
+				auto Offset2InImagev = f*Offset2(1)/z;
 
-				std::cout << "Rotation: " << CameraTMarker.R() << std::endl;
+				Eigen::VectorXd dudv(6);
+				dudv(0) = Offset0InImageu - u0;
+				dudv(1) = Offset0InImagev - v0;
+				dudv(2) = Offset1InImageu - u1;
+				dudv(3) = Offset1InImagev - v1;
+				dudv(4) = Offset2InImageu - u2;
+				dudv(5) = Offset2InImagev - v2;
 
-				auto Offset0xInCamera = Offset0InCamera(0);
-				auto Offset0yInCamera = Offset0InCamera(1);
-
-				auto Offset1xInCamera = Offset1InCamera(0);
-				auto Offset1yInCamera = Offset1InCamera(1);
-
-				auto Offset2xInCamera = Offset2InCamera(0);
-				auto Offset2yInCamera = Offset2InCamera(1);
-
-				double Offset0px = f*Offset0xInCamera/z;
-				double Offset0py = f*Offset0yInCamera/z;
-
-				double Offset1px = f*Offset1xInCamera/z;
-				double Offset1py = f*Offset1yInCamera/z;
-
-				double Offset2px = f*Offset2xInCamera/z;
-				double Offset2py = f*Offset2yInCamera/z;
-
-
-				std::cout << "u0 " << u0 << " v0: " << v0 << std::endl;
-				std::cout << "offsetu0: " << (f*Offset0(0)/z) << " offsetv0: " << (f*Offset0(1)/z) << std::endl;
-
-				Eigen::VectorXd dudv(4);
-				dudv(0) = f*Offset0(0)/z - u0;
-				dudv(1) = f*Offset0(1)/z - v0;
-				dudv(2) = f*Offset1(0)/z - u1;
-				dudv(3) = f*Offset1(1)/z - v1;
-				// dudv(0) = Offset0px - u0;
-				// dudv(1) = Offset0py - v0;
-				// dudv(2) = Offset1px - u1;
-				// dudv(3) = Offset1py - v1;
-				// dudv(4) = Offset2px - u2;
-				// dudv(5) = Offset2py - v2;
-
-				// dudv(0) = Offset0(0) - u0;
-				// dudv(1) = Offset0(1) - v0;
-				// dudv(2) = Offset1(0) - u1;
-				// dudv(3) = Offset1(1) - v1;
-				// dudv(4) = Offset2(0) - u2;
-				// dudv(5) = Offset2(1) - v2;
-
-				//std::cout << "offsetpx: " << Offsetpx << std::endl;
-				//std::cout << "u1: " << u1 << std::endl;Offset2xInCamera
-
-				circle(imflip, Point2f(offset_x+u0,offset_y+v0), 30, Scalar( 127, 0, 127), 2);
-				circle(imflip, Point2f(offset_x+u1,offset_y+v1), 30, Scalar( 255, 0, 127), 2);
-				circle(imflip, Point2f(offset_x+u2,offset_y+v2), 30, Scalar( 0, 127, 127), 2);
+				circle(imflip, Point2f(offset_x+Offset0InImageu,offset_y+Offset0InImagev), 30, Scalar( 127, 0, 127), 2);
+				circle(imflip, Point2f(offset_x+u0,offset_y+v0), 7, Scalar( 127, 0, 127), 2);
+				circle(imflip, Point2f(offset_x+Offset1InImageu,offset_y+Offset1InImagev), 30, Scalar( 255, 0, 127), 2);
+				circle(imflip, Point2f(offset_x+u1,offset_y+v1), 7, Scalar( 255, 0, 127), 2);
+				circle(imflip, Point2f(offset_x+Offset2InImageu,offset_y+Offset2InImagev), 30, Scalar( 127, 127, 127), 2);
+				circle(imflip, Point2f(offset_x+u2,offset_y+v2), 7, Scalar( 127, 127, 127), 2);
+				//circle(imflip, Point2f(offset_x+u1,offset_y+v1), 30, Scalar( 255, 0, 127), 2);
+				//circle(imflip, Point2f(offset_x+u2,offset_y+v2), 30, Scalar( 0, 127, 127), 2);
 
 				//circle(imflip, Point2f(u1+offset_x,v1+offset_y), 30, Scalar( 127, 127, 127), 10);
 				//circle(imflip, Point2f(u2+offset_x,v2+offset_y), 30, Scalar( 127, 127, 127), 10);
+
+				//imshow("delay",imflip);
+				//waitKey(0);
 
 				// NOTE Visual servoing //
 				// NOTE Track using vision, one point
@@ -468,29 +471,33 @@ void SamplePlugin::timer() {
 				auto Jimage1 = GenerateImageJ(u1,v1).e();
 				auto Jimage2 = GenerateImageJ(u2,v2).e();
 
+				std::cout << "jimage0 " << Jimage0 << std::endl;
+				std::cout << "------------------" << std::endl;
+				std::cout << "jimage1 " << Jimage1 << std::endl;
+				std::cout << "------------------" << std::endl;
 
-				Eigen::MatrixXd JCombined(4,6);
+
+				Eigen::MatrixXd JCombined(6,6);
 
 				JCombined.row(0) << Jimage0.row(0);
 				JCombined.row(1) << Jimage0.row(1);
 
 				JCombined.row(2) << Jimage1.row(0);
 				JCombined.row(3) << Jimage1.row(1);
-				//  //
-				// JCombined.row(4) << Jimage2.row(0);
-				// JCombined.row(5) << Jimage2.row(1);
 
 
-				// JCombined.row(0) << Jimage0.row(0);
-				// JCombined.row(1) << Jimage0.row(1);
-				//
-				// JCombined.row(2) << Jimage1.row(0);
-				// JCombined.row(3) << Jimage1.row(1);
-				//
-				// JCombined.row(4) << Jimage2.row(0);
-				// JCombined.row(5) << Jimage2.row(1);
+				std::cout << "JCombined " << JCombined << std::endl;
+
+				JCombined.row(4) << Jimage2.row(0);
+				JCombined.row(5) << Jimage2.row(1);
+				Eigen::MatrixXd U;
+				Eigen::VectorXd Sigma;
+				Eigen::MatrixXd V;
 
 
+				rw::math::LinearAlgebra::svd(JCombined,U, Sigma, V);
+
+				std::cout << " Sigma: " << Sigma << std::endl;
 
 				int cols = JCombined.cols();
 				int rows = JCombined.rows();
@@ -499,7 +506,7 @@ void SamplePlugin::timer() {
 				auto Jimage = Jacobian(JCombined);
 
 				// Gets R from base to tool
-				MovableFrame* _ToolFrame = (MovableFrame*) _wc->findFrame("Tool");
+				//MovableFrame* _ToolFrame = (MovableFrame*) _wc->findFrame("Tool");
 				auto TToolWorld = _device->baseTframe(_CameraFrame, _state);
 				/* Calculate S*/
 				auto RBaseTool = TToolWorld.R().inverse();
@@ -515,7 +522,12 @@ void SamplePlugin::timer() {
 				//std::cout << "zimage: rows: " << rows1 << " cols: " << cols1 << std::endl;
 
 				auto ZimageT = Zimage.transpose();
-				auto dq = (ZimageT * (Zimage*ZimageT).inverse())*dudv;
+				auto Zimage_tmp = ZimageT * (Zimage*ZimageT).inverse();
+				auto dq = Zimage_tmp*dudv;
+				std::cout << "dq: " << dq << std::endl;
+
+
+				auto Vlimits =
 
 				auto q_cur = _device->getQ(_state);
 				q_cur += Q(dq);
