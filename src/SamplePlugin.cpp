@@ -57,9 +57,6 @@ void SamplePlugin::dropBackgroundchanged(QString val){
 	Image::Ptr image = ImageLoader::Factory::load(marker);
 	_bgRender->setImage(*image);
 
-	// Set a new texture (one pixel = 1 mm)
-	//Image::Ptr imageMarker = ImageLoader::Factory::load(marker);
-	//_textureRender->setImage(*imageMarker);
 	getRobWorkStudio()->updateAndRepaint();
 }
 void SamplePlugin::dropMarkerChanged(QString val){
@@ -360,9 +357,9 @@ void SamplePlugin::timer() {
 		Mat im = toOpenCVImage(image);
 		Mat imflip;
 		cv::flip(im, imflip, 0);
+		std::vector<Point2f> interest_points;
 		if(use_vision){
 				Point2f center_point;
-				std::vector<Point2f> interest_points;
 				std::cout << "i: " << i << std::endl;
 
 				if (currentMarker == "Marker3.ppm"){
@@ -401,16 +398,46 @@ void SamplePlugin::timer() {
 				}
 			}
 
+
 				// Offsets
-				rw::math::Vector3D<> Offset0(0.125,-0.125,0);
-				rw::math::Vector3D<> Offset1(0.125,0.125,0);
-				rw::math::Vector3D<> Offset2(-0.125,-0.125,0);
+				rw::math::Vector3D<> Offset0;
+				rw::math::Vector3D<> Offset1;
+				rw::math::Vector3D<> Offset2;
 
-				// Points to be used with vision(Marker1)
-				// rw::math::Vector3D<> Offset0(0.0525,0.0525,0);
-				// rw::math::Vector3D<> Offset1(-0.0525,-0.0525,0);
-				// rw::math::Vector3D<> Offset2(-0.0525,0.0525,0);
+				if(!use_vision || currentMarker == "Marker3.ppm"){
+					// Points to be used without vision
+					Offset0[0] = 0.125;
+					Offset0[1] = -0.125;
+					Offset0[2] = 0;
 
+					//rw::math::Vector3D<> Offset1(0.125,0.125,0);
+					Offset1[0] = 0.125;
+					Offset1[1] = 0.125;
+					Offset1[2] = 0;
+
+					//rw::math::Vector3D<> Offset2(-0.125,-0.125,0);
+					Offset2[0] = -0.125;
+					Offset2[1] = -0.125;
+					Offset2[2] = 0;
+				}
+
+				if(use_vision && currentMarker == "Marker1.ppm"){
+					std::cout << "Using Marker1" << std::endl;
+				  // Points to be used with vision(Marker3)
+					// rw::math::Vector3D<> Offset0(0.0525,0.0525,0);
+					Offset0[0] = 0.0525;
+					Offset0[1] = 0.0525;
+					Offset0[2] = 0;
+					// rw::math::Vector3D<> Offset1(-0.0525,-0.0525,0);
+					Offset1[0] = -0.0525;
+					Offset1[1] = -0.0525;
+					Offset1[2] = 0;
+					// rw::math::Vector3D<> Offset2(-0.0525,0.0525,0);
+					Offset2[0] = -0.0525;
+					Offset2[1] = 0.0525;
+					Offset2[2] = 0;
+				}
+				// Given by assignment
 				//rw::math::Vector3D<> Offset0(0,0,0);
 				//rw::math::Vector3D<> Offset1(0.1,0,0);
 				//rw::math::Vector3D<> Offset2(0,0.1,0);
@@ -439,7 +466,7 @@ void SamplePlugin::timer() {
 				int offset_x = 1024/2;
 				int offset_y = 768/2;
 
-				z = MarkerPosition0InCameraFrame[2];
+				//z = MarkerPosition0InCameraFrame[2];
 
 				//std::cout << "z: " << z << std::endl;
 
@@ -449,22 +476,25 @@ void SamplePlugin::timer() {
 				double y1 =  MarkerPosition1InCameraFrame[1];
 				double x2 =  MarkerPosition2InCameraFrame[0];
 				double y2 =  MarkerPosition2InCameraFrame[1];
-				//
-				float u0 = f*x0/z;
-				float v0 = f*y0/z;
-				float u1 = f*x1/z;
-				float v1 = f*y1/z;
-				float u2 = f*x2/z;
-				float v2 = f*y2/z;
 
-				/* Vision */
-				// std::cout << "vector size: " << interest_points.size() << std::endl;
-				// double u0 = interest_points[0].x - offset_x;
-				// double v0 = interest_points[0].y - offset_y;
-				// double u1 = interest_points[1].x - offset_x;
-				// double v1 = interest_points[1].y - offset_y;
-				// double u2 = interest_points[2].x - offset_x;
-				// double v2 = interest_points[2].y - offset_y;
+				double u0,v0,u1,v1,u2,v2;
+				if(use_vision){
+					// Track using vision
+					u0 = interest_points[0].x - offset_x;
+					v0 = interest_points[0].y - offset_y;
+					u1 = interest_points[1].x - offset_x;
+					v1 = interest_points[1].y - offset_y;
+					u2 = interest_points[2].x - offset_x;
+					v2 = interest_points[2].y - offset_y;
+				} else {
+					// Track using markers pose
+					u0 = f*x0/z;
+					v0 = f*y0/z;
+					u1 = f*x1/z;
+					v1 = f*y1/z;
+					u2 = f*x2/z;
+					v2 = f*y2/z;
+				}
 
 				auto Offset0InImageu = f*(-Offset0(0))/z;
 				auto Offset0InImagev = f*Offset0(1)/z;
@@ -538,7 +568,6 @@ void SamplePlugin::timer() {
 				auto q_cur = _device->getQ(_state);
 
 				Q dq_constrained = VelocityLimitReached(Q(dq), float(dt)/1000);
-
 
 				// Add the change in robot configuration
 				q_cur += Q(dq_constrained);
