@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>428</width>
-    <height>479</height>
+    <height>513</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -75,6 +75,52 @@
         <item>
          <property name="text">
           <string>MarkerMotionFast.txt</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Background</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="_spinBoxBackground">
+        <item>
+         <property name="text">
+          <string>color1.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>color2.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>color3.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>lines1.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>texture1.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>texture2.ppm</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>texture3.ppm</string>
          </property>
         </item>
        </widget>

@@ -49,6 +49,7 @@ Q_INTERFACES( rws::RobWorkStudioPlugin )
 public:
 
   std::string marker_path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/markers/";
+	std::string background_path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/backgrounds/";
 
 
 	//Robotics
@@ -68,6 +69,7 @@ private slots:
 	void btnPressed();
 	void timer();
 	void dropSequenceChanged(QString value);
+	void dropBackgroundchanged(QString val);
 	void dropMarkerChanged(QString value);
 	void sliderDt(int dt);
 
@@ -84,7 +86,7 @@ private:
 
 	float f = 823;
 	float z = 0.5;
-	float dt = 1; 
+	float dt = 1;
 
 	// Robotics
 	bool firstrun = true;
@@ -93,7 +95,7 @@ private:
 
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 	int i = 0;
-	std::string currentMarker;
+	std::string currentMarker = "Markerpose";
 
 	std::vector<Pose> motionVector;
 	QTimer* _timer;

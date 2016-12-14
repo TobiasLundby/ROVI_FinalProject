@@ -26,13 +26,14 @@ SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_
 	connect(_btnNextFrame    ,SIGNAL(pressed()), this, SLOT(btnPressed()) );
 
 	// Spin and sliders
-	connect(_spinBox  ,SIGNAL(valueChanged(int)), this, SLOT(btnPressed()) );
-  connect(_slider  ,SIGNAL(valueChanged(int)), this, SLOT(btnPressed()) );
-	connect(_dtslider  ,SIGNAL(valueChanged(int)), this, SLOT(sliderDt()) );
+	connect(_spinBox  ,SIGNAL(valueChanged(int)), this, SLOT( btnPressed()) );
+  connect(_slider  ,SIGNAL(valueChanged(int)), this, SLOT( btnPressed()) );
+	connect(_dtslider  ,SIGNAL(valueChanged(int)), this, SLOT( sliderDt(int)) );
 
   // Dropdowns
   connect(_drop_sequenceselect  ,SIGNAL(currentIndexChanged(QString )), this, SLOT(dropSequenceChanged(QString)) );
   connect(_drop_markerselect  ,SIGNAL(currentIndexChanged(QString )), this, SLOT(dropMarkerChanged(QString)) );
+	connect(_spinBoxBackground  ,SIGNAL(currentIndexChanged(QString )), this, SLOT(dropBackgroundchanged(QString)) );
 
 
 	Image textureImage(300,300,Image::GRAY,Image::Depth8U);
@@ -42,11 +43,25 @@ SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_
 	_framegrabber = NULL;
 }
 
-
 void SamplePlugin::sliderDt(int dt){
 	this->dt = dt;
 }
 
+
+void SamplePlugin::dropBackgroundchanged(QString val){
+	auto value = val.toUtf8().constData();
+
+	std::string marker = background_path + value;
+	std::cout << "Marker changed to: " << marker << "\n";
+
+	Image::Ptr image = ImageLoader::Factory::load(marker);
+	_bgRender->setImage(*image);
+
+	// Set a new texture (one pixel = 1 mm)
+	//Image::Ptr imageMarker = ImageLoader::Factory::load(marker);
+	//_textureRender->setImage(*imageMarker);
+	getRobWorkStudio()->updateAndRepaint();
+}
 void SamplePlugin::dropMarkerChanged(QString val){
   auto value = val.toUtf8().constData();
   currentMarker = value;
@@ -132,7 +147,8 @@ void SamplePlugin::initialize() {
 	_label->setPixmap(QPixmap::fromImage(img)); // Show the image at the label in the plugin
 
 
-  // Load default marker and sequence
+  // Load default marker, background and sequence
+	dropBackgroundchanged("color1.ppm");
   dropMarkerChanged("Markerpose");
   dropSequenceChanged("MarkerMotionSlow.txt");
 }
@@ -230,8 +246,8 @@ void SamplePlugin::btnPressed() {
     log().info() << "Starting timer\n";
     if (!_timer->isActive()){
 		    _timer->start(100); // run 10 Hz
-        Image::Ptr image = ImageLoader::Factory::load("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/backgrounds/color3.ppm");
-        _bgRender->setImage(*image);
+        //Image::Ptr image = ImageLoader::Factory::load("/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/backgrounds/color3.ppm");
+        //_bgRender->setImage(*image);
     }
 	} else if(obj==_btnStop){
 		log().info() << "Stopping timer\n";
@@ -299,21 +315,8 @@ Jacobian SamplePlugin::GenerateImageJ(float u, float v){
 
 
 Q SamplePlugin::VelocityLimitReached(Q dq, float dt){
-	// static Q lastq = currentQ;
-	//
-	// // Calculate joint velocity
-  // Q diff = currentQ-lastq;
-	//
-	// // Get max velocity
-	// auto maxQvel = _device->getVelocityLimits();
-	// for(int i = 0; i < 7; i++){
-	// 	float singleQ =  diff[i];
-	// 	if(abs(singleQ) > abs(maxQvel[i])){
-	// 		std::cout << "Hit vel. limit #" << i  << std::endl;
-	// 		currentQ[i] = maxQvel[i];
-	// 	}
-	// }
 
+	std::cout << "dt: " << dt << std::endl;
 	auto maxQvel = _device->getVelocityLimits();
 	for(int i = 0; i < 7; i++){
 		if( abs(dq[i]) >= abs(maxQvel[i]/dt) ){
@@ -328,6 +331,7 @@ void SamplePlugin::timer() {
   if(i == motionVector.size()-1){
     std::cout << "Reached end of sequence" << std::endl;
     _timer->stop();
+		return;
   }
 
   // NOTE updates marker position with respect to base
@@ -347,8 +351,6 @@ void SamplePlugin::timer() {
 			_device->setQ(q_initial, _state);
 			getRobWorkStudio()->setState(_state);
 		}
-
-
 		// Get the image as a RW image
 		Frame* cameraFrame = _wc->findFrame("CameraSim");
 		_framegrabber->grab(cameraFrame, _state);
@@ -358,44 +360,46 @@ void SamplePlugin::timer() {
 		Mat im = toOpenCVImage(image);
 		Mat imflip;
 		cv::flip(im, imflip, 0);
-		Point2f center_point;
-		std::vector<Point2f> interest_points;
-		std::cout << "i: " << i << std::endl;
+		if(use_vision){
+				Point2f center_point;
+				std::vector<Point2f> interest_points;
+				std::cout << "i: " << i << std::endl;
 
-		if (currentMarker == "Marker3.ppm"){
-    	Mat imgtmp;
-    	cvtColor(imflip, imgtmp, CV_BGR2GRAY);
-    	auto corners = siftdetector->GetCornersOfMarkerInScene(imgtmp);
+				if (currentMarker == "Marker3.ppm"){
+		    	Mat imgtmp;
+		    	cvtColor(imflip, imgtmp, CV_BGR2GRAY);
+		    	auto corners = siftdetector->GetCornersOfMarkerInScene(imgtmp);
 
-    	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
-      	std::cout << "Could not find SIFT intersection" << std::endl;
-    	}
-    	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
-		} else if (currentMarker == "Marker1.ppm"){
-			//std::cout << "not implemented yet" << std::endl;
-			Mat imflip_bgr;
-			cvtColor(imflip, imflip_bgr, COLOR_BGR2RGB);
+		    	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
+		      	std::cout << "Could not find SIFT intersection" << std::endl;
+		    	}
+		    	circle(imflip, center_point, 30, Scalar( 0, 255, 0), 10);
+				} else if (currentMarker == "Marker1.ppm"){
+					//std::cout << "not implemented yet" << std::endl;
+					Mat imflip_bgr;
+					cvtColor(imflip, imflip_bgr, COLOR_BGR2RGB);
 
-			imwrite("from_camera.png", imflip_bgr);
-			auto interest_points1 = marker1detector->FindMarker(imflip_bgr);
-			for(auto elm: interest_points1){
-				interest_points.push_back(elm);
+					imwrite("from_camera.png", imflip_bgr);
+					auto interest_points1 = marker1detector->FindMarker(imflip_bgr);
+					for(auto elm: interest_points1){
+						interest_points.push_back(elm);
+					}
+
+					if (interest_points.size()) {
+		      	if(!lineIntersection(interest_points[0], interest_points[1], interest_points[3], interest_points[2], center_point)){
+		        	std::cout << "Could not find SIFT intersection" << std::endl;
+		      	}
+		      	circle(imflip, center_point, 5, Scalar( 255, 0, 0), -1);
+						//circle(imflip, interest_points.at(0), 5, Scalar( 127, 127, 127), -1); // Down left
+						//circle(imflip, interest_points.at(1), 5, Scalar( 127, 127, 127), -1); // Up right
+						//circle(imflip, interest_points.at(2), 5, Scalar( 127, 127, 127), -1); // Down right
+						//circle(imflip, interest_points.at(3), 5, Scalar( 127, 127, 127), -1); // Up left
+					}
+
+				} else {
+					imwrite("failed_detecion.png",imflip );
+				}
 			}
-
-			if (interest_points.size()) {
-      	if(!lineIntersection(interest_points[0], interest_points[1], interest_points[3], interest_points[2], center_point)){
-        	std::cout << "Could not find SIFT intersection" << std::endl;
-      	}
-      	circle(imflip, center_point, 5, Scalar( 255, 0, 0), -1);
-				//circle(imflip, interest_points.at(0), 5, Scalar( 127, 127, 127), -1); // Down left
-				//circle(imflip, interest_points.at(1), 5, Scalar( 127, 127, 127), -1); // Up right
-				//circle(imflip, interest_points.at(2), 5, Scalar( 127, 127, 127), -1); // Down right
-				//circle(imflip, interest_points.at(3), 5, Scalar( 127, 127, 127), -1); // Up left
-			}
-
-		} else {
-			imwrite("failed_detecion.png",imflip );
-		}
 
 				// Offsets
 				rw::math::Vector3D<> Offset0(0.125,-0.125,0);
@@ -533,7 +537,7 @@ void SamplePlugin::timer() {
 				// Get current robot configuration
 				auto q_cur = _device->getQ(_state);
 
-				Q dq_constrained = VelocityLimitReached(Q(dq), 0.1);
+				Q dq_constrained = VelocityLimitReached(Q(dq), float(dt)/1000);
 
 
 				// Add the change in robot configuration
