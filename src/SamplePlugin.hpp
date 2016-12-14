@@ -86,13 +86,10 @@ private:
 
 	float f = 823;
 	float z = 0.5;
-	float dt = 1;
+	float dt = 1000;
 
 	// Robotics
 	bool firstrun = true;
-
-
-
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 	int i = 0;
 	std::string currentMarker = "Markerpose";

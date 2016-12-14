@@ -28,11 +28,13 @@ int main(int argc, char** argv){
     if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
       std::cout << "Could not find SIFT intersection" << std::endl;
     }
+
+    circle(img_scene, corners[2], 30, Scalar( 0, 0, 255), 10);
     circle(img_scene, center_point, 30, Scalar( 0, 255, 0), 10);
 
     namedWindow( "Marker", CV_WINDOW_NORMAL );
     imshow( "Marker", img_scene );
-    waitKey(1);
+    waitKey(0);
   }
 
   return 0;

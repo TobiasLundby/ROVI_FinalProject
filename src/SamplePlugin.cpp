@@ -41,6 +41,7 @@ SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_
 	Image bgImage(0,0,Image::GRAY,Image::Depth8U);
 	_bgRender = new RenderImage(bgImage,2.5/1000.0);
 	_framegrabber = NULL;
+
 }
 
 void SamplePlugin::sliderDt(int dt){
@@ -89,7 +90,6 @@ void SamplePlugin::dropMarkerChanged(QString val){
      std::cout << "Can not open image" << marker << std::endl;
    }
   siftdetector = new SIFTDetector(image);
-
 	marker1detector = new ColorDetector();
 }
 
@@ -148,6 +148,8 @@ void SamplePlugin::initialize() {
 	dropBackgroundchanged("color1.ppm");
   dropMarkerChanged("Markerpose");
   dropSequenceChanged("MarkerMotionSlow.txt");
+
+
 }
 
 void SamplePlugin::open(WorkCell* workcell){
@@ -312,15 +314,23 @@ Jacobian SamplePlugin::GenerateImageJ(float u, float v){
 
 
 Q SamplePlugin::VelocityLimitReached(Q dq, float dt){
-
-	std::cout << "dt: " << dt << std::endl;
 	auto maxQvel = _device->getVelocityLimits();
+	auto cur_velocity = dq/dt;
+	auto old_dq = dq;
+
+	std::cout << "cur_velocity " << cur_velocity << std::endl;
+	std::cout << "max_velocity " << maxQvel << std::endl;
+
 	for(int i = 0; i < 7; i++){
-		if( abs(dq[i]) >= abs(maxQvel[i]/dt) ){
+
+		if( abs(dq[i]/dt) >= abs(maxQvel[i]) ){
 				std::cout << "Hit vel. limit #" << i  << std::endl;
-				dq[i] = maxQvel[i]/dt;
+				dq[i] = (dq[i]/abs(dq[i]))*maxQvel[i]*dt;
 		}
 	}
+
+	std::cout << "old dq " << old_dq << std::endl;
+	std::cout << "new dq " << dq << std::endl;
 
 	return dq;
 }
@@ -367,6 +377,11 @@ void SamplePlugin::timer() {
 		    	cvtColor(imflip, imgtmp, CV_BGR2GRAY);
 		    	auto corners = siftdetector->GetCornersOfMarkerInScene(imgtmp);
 
+					interest_points.push_back(corners[0]);
+					interest_points.push_back(corners[3]);
+					interest_points.push_back(corners[1]);
+					interest_points.push_back(corners[2]);
+
 		    	if(!lineIntersection(corners[0], corners[2], corners[1], corners[3], center_point)){
 		      	std::cout << "Could not find SIFT intersection" << std::endl;
 		    	}
@@ -376,7 +391,6 @@ void SamplePlugin::timer() {
 					Mat imflip_bgr;
 					cvtColor(imflip, imflip_bgr, COLOR_BGR2RGB);
 
-					imwrite("from_camera.png", imflip_bgr);
 					auto interest_points1 = marker1detector->FindMarker(imflip_bgr);
 					for(auto elm: interest_points1){
 						interest_points.push_back(elm);
@@ -391,6 +405,9 @@ void SamplePlugin::timer() {
 						//circle(imflip, interest_points.at(1), 5, Scalar( 127, 127, 127), -1); // Up right
 						//circle(imflip, interest_points.at(2), 5, Scalar( 127, 127, 127), -1); // Down right
 						//circle(imflip, interest_points.at(3), 5, Scalar( 127, 127, 127), -1); // Up left
+					} else {
+						std::cout << "Marker1.ppm, didn't find 4 circles" << std::endl;
+						return;
 					}
 
 				} else {
@@ -567,12 +584,12 @@ void SamplePlugin::timer() {
 				// Get current robot configuration
 				auto q_cur = _device->getQ(_state);
 
+				// Set max vel
 				Q dq_constrained = VelocityLimitReached(Q(dq), float(dt)/1000);
 
 				// Add the change in robot configuration
 				q_cur += Q(dq_constrained);
 
-				// Set max vel.
 
 
 				// Update
