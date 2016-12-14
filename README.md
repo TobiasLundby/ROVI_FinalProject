@@ -1,4 +1,4 @@
-# How to install
+# Installation guide
 
 Clone the repository
 ```sh
