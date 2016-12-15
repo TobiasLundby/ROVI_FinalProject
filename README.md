@@ -13,6 +13,7 @@ In order to load the required files such as markers and motions, you'll need to 
 ```sh
 /* EDIT HERE */
 std::string plugin_path = "/home/student/SamplePluginPA10/"; // Path to SamplePluginPA10
+std::string log_path = "/home/student/Final_project/data/"; // Folder to store log files
 int NumberOfPoints = 1; // Number of points to track, can either be 1,2 or 2.
 bool Testrun = true; // Determines whether testdata should be generated, see section further down about logging.
 /* END EDIT HERE */
@@ -53,3 +54,5 @@ $ q_Markerpose_MarkerMotionX.txtY.csv
 ```
 Contains the configuration of the robot in each timestep.
 
+If the variable *Testrun* is set to true, it will run through the dt values given in the assignment.
+For each dt, three logs will be saved with the content described above.
