@@ -59,6 +59,7 @@ For each dt, three logs will be saved with the content described above.
 
 
 The project contains the following source files:
+```
 src
 ├── ColorDetector.cpp - Code used in marker1
 ├── ColorDetector.hpp -     -||-
@@ -74,3 +75,4 @@ src
 └── SIFTDetector.hpp -      -||-
 
 0 directories, 12 files
+```
