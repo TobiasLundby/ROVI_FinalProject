@@ -56,3 +56,21 @@ Contains the configuration of the robot in each timestep.
 
 If the variable *Testrun* is set to true, it will run through the dt values given in the assignment.
 For each dt, three logs will be saved with the content described above.
+
+
+The project contains the following source files:
+src
+├── ColorDetector.cpp - Code used in marker1
+├── ColorDetector.hpp -     -||-
+├── functions.cpp     - Common functions used between detection algorithms
+├── functions.hpp     -     -||-
+├── lena.bmp
+├── pa_icon.png
+├── resources.qrc
+├── SamplePlugin.cpp - Visual servoing implementation
+├── SamplePlugin.hpp -      -||-
+├── SamplePlugin.ui  - 
+├── SIFTDetector.cpp - Code used in marker3
+└── SIFTDetector.hpp -      -||-
+
+0 directories, 12 files
