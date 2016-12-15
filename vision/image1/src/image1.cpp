@@ -2,7 +2,7 @@
 /*
  *  image1.cpp
  *  ROVI - Final Project - Visual Servoing
- *
+ * Inspiration for blob detection: https://www.learnopencv.com/blob-detection-using-opencv-python-c/
  */
 
 // Includes

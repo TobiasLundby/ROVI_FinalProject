@@ -1,5 +1,7 @@
 #include "functions.hpp"
 
+// * Inspiration for blob detection: https://www.learnopencv.com/blob-detection-using-opencv-python-c/
+
 #pragma once
 
 // Namespaces
