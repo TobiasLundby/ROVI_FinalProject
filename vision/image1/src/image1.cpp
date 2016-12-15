@@ -133,10 +133,10 @@ void on_trackbar()
   std::vector<KeyPoint> keypoints_MB, keypoints_MB_final, keypoints_MR_final, keypoints_combined;
   detector->detect( mask_MB, keypoints_MB);
 
-  //Mat im_with_keypoints; // removed the define here!
+  Mat im_with_keypoints; // removed the define here!
   // drawKeypoints( image, keypoints_combined, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
   // imshow("test",im_with_keypoints);
-  // waitKey(0);
+  waitKey(0);
   // Filter found blobs
   Mat image_circle;
   image_circle = Mat::zeros(image.size(), image.type());
@@ -270,7 +270,7 @@ void on_trackbar()
   }
 
   //im_with_keypoints; // removed the define here!
-  //drawKeypoints( image, keypoints_combined, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
+  drawKeypoints( image, keypoints_combined, im_with_keypoints, Scalar(0,127,127), DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
   //circle(im_with_keypoints, center_MB, 2, Scalar(0,127,255), 2);
 
   // Sort markers in the right order
@@ -414,14 +414,14 @@ void on_trackbar()
   std::vector< Point2f > output_points; // Elements: 1=MB1, 2=MB2, 3=MB3, 4=MB4, 5=center
 
   if (keypoints_MB_final.size() == 3 and keypoints_MR_final.size() == 1) {
-    // putText(im_with_keypoints,  "MB1", keypoints_MB_final[MB1_id].pt,
-    // FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
-    // putText(im_with_keypoints,  "MB2", keypoints_MB_final[MB2_id].pt,
-    // FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
-    // putText(im_with_keypoints,  "MB3", keypoints_MB_final[MB3_id].pt,
-    // FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
-    // putText(im_with_keypoints,  "MR1", keypoints_MR_final[0].pt,
-    // FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+    putText(im_with_keypoints,  "MB1", keypoints_MB_final[MB1_id].pt,
+    FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+    putText(im_with_keypoints,  "MB2", keypoints_MB_final[MB2_id].pt,
+    FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+    putText(im_with_keypoints,  "MB3", keypoints_MB_final[MB3_id].pt,
+    FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
+    putText(im_with_keypoints,  "MR1", keypoints_MR_final[0].pt,
+    FONT_HERSHEY_COMPLEX_SMALL, 2, cvScalar(0,127,127), 1, CV_AA);
 
     //circle(im_with_keypoints, center_MB, 2, Scalar(0,127,255), 2);
 
@@ -439,7 +439,7 @@ void on_trackbar()
     if(!lineIntersection(output_points[0], output_points[1], output_points[3], output_points[2], center_point)){
       std::cout << "Could not find intersection" << std::endl;
     } else {
-      //circle(im_with_keypoints, center_point, 2, Scalar(127,0,0), 2);
+      circle(im_with_keypoints, center_point, 2, Scalar(127,0,0), 2);
     }
     output_points.push_back(center_point);
 
@@ -457,7 +457,7 @@ void on_trackbar()
 
   //imshow("Display Image", image);
   //imshow("Display Masked", image_masked_MR);
-  //imshow("Display Keypoints", im_with_keypoints);
+  imshow("Display Keypoints", im_with_keypoints);
   //imshow("Circle", image_circle);
 
   //imshow("Shifted HSV", image_hsv_shifted);
@@ -502,7 +502,7 @@ int main(int argc, char **argv) {
 
   //namedWindow("Display Image", CV_WINDOW_AUTOSIZE );
   //namedWindow("Display Masked", CV_WINDOW_AUTOSIZE );
-  //namedWindow("Display Keypoints", CV_WINDOW_AUTOSIZE );
+  namedWindow("Display Keypoints", CV_WINDOW_AUTOSIZE );
   //namedWindow("Trackbars", CV_WINDOW_AUTOSIZE );
   //namedWindow("Circle", CV_WINDOW_AUTOSIZE );
   //namedWindow("Shifted HSV", CV_WINDOW_AUTOSIZE );
