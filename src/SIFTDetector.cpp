@@ -1,18 +1,19 @@
 #include "SIFTDetector.hpp"
 
+/*
+        The following code has been modified from: http://docs.opencv.org/2.4/doc/tutorials/features2d/feature_homography/feature_homography.html
+	SIFT example: http://docs.opencv.org/3.1.0/da/df5/tutorial_py_sift_intro.html
+*/
 
 SIFTDetector::SIFTDetector(Mat &img_marker){
-  std::cout << "Enter constructor" << std::endl;
   this->img_marker = img_marker;
   f2d = xfeatures2d::SIFT::create();
 
   //-- Step 1: Detect the keypoints:
   f2d->detect( img_marker, keypoints_marker );
-  std::cout << "exit detect" << std::endl;
 
   //-- Step 2: Calculate descriptors (feature vectors)
   f2d->compute( img_marker, keypoints_marker, descriptors_marker );
-  std::cout << "exit compute" << std::endl;
 }
 
 std::vector<Point2f> SIFTDetector::GetCornersOfMarkerInScene(Mat &img_scene){
@@ -92,20 +93,6 @@ std::vector<Point2f> SIFTDetector::GetCornersOfMarkerInScene(Mat &img_scene){
 
   perspectiveTransform( obj_corners, scene_corners, H);
 
-  //-- Draw lines between the corners (the mapped marker in the scene - image_2 )
-  //line( img_scene, scene_corners[0], scene_corners[1], Scalar(0, 255, 0), 4 );
-//  line( img_matches, scene_corners[1] + Point2f( img_scene.cols, 0), scene_corners[2] + Point2f( img_scene.cols, 0), Scalar( 0, 255, 0), 4 );
-//  line( img_matches, scene_corners[2] + Point2f( img_scene.cols, 0), scene_corners[3] + Point2f( img_scene.cols, 0), Scalar( 0, 255, 0), 4 );
-//  line( img_matches, scene_corners[3] + Point2f( img_scene.cols, 0), scene_corners[0] + Point2f( img_scene.cols, 0), Scalar( 0, 255, 0), 4 );
 
   return scene_corners;
-
-/*
-  Point2f center_point;
-  std::cout << " found intersecting: " << lineIntersection(scene_corners[0], scene_corners[2], scene_corners[1], scene_corners[3], center_point) << std::endl;
-  center_point += Point2f( img_scene.cols, 0);
-  std::cout << "point center: " << center_point << std::endl;
-  circle(img_matches, center_point, 30, Scalar( 0, 255, 0), 10);
-  namedWindow( "matches", CV_WINDOW_NORMAL );
-*/
 }

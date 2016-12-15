@@ -529,7 +529,7 @@ int main(int argc, char **argv) {
     ss << std::setw(2) << std::setfill('0') << i;
     std::string s = ss.str();
 
-    std::string file_id = "marker_color";
+    std::string file_id = "marker_color_hard";
     std::cout << "opening: " << file_id << "_" +s +  ".png" << std::endl;
     image = imread("../../sequences/" + file_id + "/" + file_id + "_" + s +  ".png", 1);
     on_trackbar();

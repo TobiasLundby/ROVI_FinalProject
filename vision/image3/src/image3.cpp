@@ -49,7 +49,10 @@ int main(int argc, char** argv){
       std::cout << "Could not find SIFT intersection" << std::endl;
     }
 
+    circle(img_scene, corners[0], 30, Scalar( 0, 0, 255), 10);
+    circle(img_scene, corners[1], 30, Scalar( 0, 0, 255), 10);
     circle(img_scene, corners[2], 30, Scalar( 0, 0, 255), 10);
+    circle(img_scene, corners[3], 30, Scalar( 0, 0, 255), 10);
     circle(img_scene, center_point, 30, Scalar( 0, 255, 0), 10);
 
     long long time_end = currentTimeUs();
@@ -58,9 +61,9 @@ int main(int argc, char** argv){
     timing_data << std::setprecision(8) << i << "," << 0 << "," << 0 << "," << corners[0].x  << "," << corners[0].y << "," << corners[1].x << "," << corners[1].y << "," << corners[2].x << "," << corners[2].y << "," << corners[3].x << "," << corners[3].y << "," << center_point.x << "," << center_point.y << "," << (time_end-time_start) << "\n";
     timing_data.close();
 
-    namedWindow( "Marker", CV_WINDOW_NORMAL );
+    namedWindow( "Marker", CV_WINDOW_AUTOSIZE );
     imshow( "Marker", img_scene );
-//    waitKey(0);
+    waitKey(0);
   }
 
   return 0;
