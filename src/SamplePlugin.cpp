@@ -46,6 +46,7 @@ SamplePlugin::SamplePlugin(): RobWorkStudioPlugin("SamplePluginUI", QIcon(":/pa_
 
 void SamplePlugin::sliderDt(int dt){
 	this->dt = dt;
+	std::cout << "dt: " << dt << std::endl;
 }
 
 
@@ -95,17 +96,16 @@ void SamplePlugin::dropMarkerChanged(QString val){
 
 void SamplePlugin::dropSequenceChanged(QString val){
   auto value = val.toUtf8().constData();
-  std::string path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/motions/";
+	selectedSequence = value;
 
 
-  std::ifstream infile(path + value);
+  std::ifstream infile(sequence_path + value);
   if (infile.is_open()) {
-    std::cout << "Motion file open" << path + value << std::endl;
+    std::cout << "Motion file open" << sequence_path + value << std::endl;
   } else {
-    std::cout << "motion file NOT open" << path + value  << std::endl;
+    std::cout << "motion file NOT open" << sequence_path + value  << std::endl;
   }
 	double x, y, z, r, p, yaw;
-
 
   std::string line;
   motionVector.clear(); // Removing existing items in vector
@@ -264,34 +264,6 @@ void SamplePlugin::btnPressed() {
 	}
 }
 
-rw::math::VelocityScrew6D<double> SamplePlugin::calculateDeltaU(rw::math::Transform3D<double> baseTtool, rw::math::Transform3D<double> baseTtool_desired) {
-    // Calculate dp
-    rw::math::Vector3D<double> dp = baseTtool_desired.P() - baseTtool.P();
-
-    // Calculate dw
-    rw::math::EAA<double> dw(baseTtool_desired.R() * baseTtool.R().inverse());
-
-    return rw::math::VelocityScrew6D<double>(dp, dw);
-}
-
-rw::math::Q SamplePlugin::algorithm1(const rw::models::Device::Ptr device, rw::kinematics::State state, const rw::kinematics::Frame* tool,
-                       const rw::math::Transform3D<double> baseTtool_desired, const rw::math::Q q_in) {
-    auto baseTtool = device->baseTframe(tool, state);
-    auto deltaU = calculateDeltaU(baseTtool, baseTtool_desired);
-    rw::math::Q q = q_in;
-    const double epsilon = 0.0001;
-    while(deltaU.norm2() > epsilon) {
-        auto J = device->baseJframe(tool, state);
-        rw::math::Q deltaQ(J.e().inverse() * deltaU.e());
-        q += deltaQ;
-        device->setQ(q, state);
-        baseTtool = device->baseTframe(tool, state);
-        deltaU = calculateDeltaU(baseTtool, baseTtool_desired);
-    }
-    return q;
-}
-
-
 Jacobian SamplePlugin::GenerateImageJ(float u, float v){
 	Jacobian Jimage(2,6);
 	Jimage(0,0) = -f/z;
@@ -312,25 +284,30 @@ Jacobian SamplePlugin::GenerateImageJ(float u, float v){
 	return Jimage;
 }
 
-
 Q SamplePlugin::VelocityLimitReached(Q dq, float dt){
 	auto maxQvel = _device->getVelocityLimits();
 	auto cur_velocity = dq/dt;
 	auto old_dq = dq;
 
-	std::cout << "cur_velocity " << cur_velocity << std::endl;
-	std::cout << "max_velocity " << maxQvel << std::endl;
+	//std::cout << "cur_velocity " << cur_velocity << std::endl;
+	//std::cout << "max_velocity " << maxQvel << std::endl;
+	float dt_tmp = dt;
+	if(use_vision && currentMarker == "Marker1.ppm"){
+		dt_tmp -= 142;
+	}
+	if(use_vision && currentMarker == "Marker3.ppm"){
+		dt_tmp -= 0; // CORRECT THIS WITH TIMING FROM CORNY VISION!!
+	}
 
 	for(int i = 0; i < 7; i++){
-
 		if( abs(dq[i]/dt) >= abs(maxQvel[i]) ){
 				std::cout << "Hit vel. limit #" << i  << std::endl;
 				dq[i] = (dq[i]/abs(dq[i]))*maxQvel[i]*dt;
 		}
 	}
 
-	std::cout << "old dq " << old_dq << std::endl;
-	std::cout << "new dq " << dq << std::endl;
+	//std::cout << "old dq " << old_dq << std::endl;
+	//std::cout << "new dq " << dq << std::endl;
 
 	return dq;
 }
@@ -340,7 +317,8 @@ void SamplePlugin::timer() {
     _timer->stop();
 
 		ofstream file_qlog;
-		file_qlog.open ("q.csv");
+		std::string filename_q = log_path+"q_" + currentMarker + "_" + selectedSequence + std::to_string(dt) + ".csv";
+		file_qlog.open (filename_q.c_str());
 		file_qlog << "q1,q2,q3,q4,q5,q6,q7" << std::endl;
 		for(auto q: q_log){
 			for(int i = 0; i < 7;i++){
@@ -349,14 +327,37 @@ void SamplePlugin::timer() {
 			file_qlog << std::endl;
 		}
 		file_qlog.close();
+		q_log.clear();
 
     ofstream file_toollog;
-		file_toollog.open ("tool.csv");
+		std::string filename_log = log_path+"log_" + currentMarker + "_" + selectedSequence + std::to_string(dt) +  ".csv";
+		file_toollog.open (filename_log.c_str());
 		file_toollog << "x,y,z,r,p,y" << std::endl;
 	  for(auto tool: tool_log){
 			file_toollog << tool.P()[0] << "," << tool.P()[1]<< "," << tool.P()[2] << "," << RPY<>(tool.R())[0] << "," << RPY<>(tool.R())[1] << "," << RPY<>(tool.R())[2] << std::endl;
 		}
 		file_toollog.close();
+		tool_log.clear();
+
+		ofstream errorlog;
+		std::string filename_error = log_path+"error_" + currentMarker + "_" + selectedSequence + std::to_string(dt) + ".csv";
+		errorlog.open(filename_error.c_str());
+		errorlog << "x,y" << std::endl;
+		for(auto elm : error_log){
+				errorlog << elm.x << "," << elm.y << std::endl;
+		}
+		errorlog.close();
+		error_log.clear();
+
+		if(Testrun){
+			if(dt > 50){
+				// Reset automatic
+				emit _btnRestart->click();
+				emit _btnStart->click();
+				dt-=50;
+				std::cout << "dt: " << dt << std::endl;
+			}
+		}
 
 		return;
   }
@@ -388,8 +389,9 @@ void SamplePlugin::timer() {
 		Mat imflip;
 		cv::flip(im, imflip, 0);
 		std::vector<Point2f> interest_points;
+		Point2f center_point;
+
 		if(use_vision){
-				Point2f center_point;
 				std::cout << "i: " << i << std::endl;
 
 				if (currentMarker == "Marker3.ppm"){
@@ -503,6 +505,22 @@ void SamplePlugin::timer() {
 				int offset_x = 1024/2;
 				int offset_y = 768/2;
 
+
+				// Tracking error
+				auto MarkerCenterInMarkerFrame = MarkerTWorld*MarkerTransform3D.P();
+				auto MarkerCenterInCameraFrame = CameraTMarker*MarkerCenterInMarkerFrame;
+				auto u_center_data = f*MarkerCenterInCameraFrame[0]/z;
+				auto v_center_data = f*MarkerCenterInCameraFrame[1]/z;
+
+				//std::cout << "x truth: " << u_center_data << " y truth: " << v_center_data  << " x est.: " << center_point.x-offset_x << " y est.:" << center_point.y-offset_y << std::endl;
+				if(use_vision){
+					auto error_u =  center_point.x-offset_x;
+					auto error_v =  center_point.y-offset_y;
+					error_log.push_back( Point2f(error_u,error_v) );
+				} else {
+					error_log.push_back( Point2f(u_center_data,v_center_data) );
+				}
+
 				//z = MarkerPosition0InCameraFrame[2];
 
 				//std::cout << "z: " << z << std::endl;
@@ -517,16 +535,28 @@ void SamplePlugin::timer() {
 				double u0,v0,u1,v1,u2,v2;
 				if(use_vision){
 					// Track using vision
+				//	if(NumberOfPoints == 1){
+					//	u0 = center_point.x - offset_x;
+					//	v0 = center_point.y - offset_y;
+				//	} else {
+						// Track using vision
 					u0 = interest_points[0].x - offset_x;
 					v0 = interest_points[0].y - offset_y;
+					//}
+
 					u1 = interest_points[1].x - offset_x;
 					v1 = interest_points[1].y - offset_y;
 					u2 = interest_points[2].x - offset_x;
 					v2 = interest_points[2].y - offset_y;
 				} else {
 					// Track using markers pose
-					u0 = f*x0/z;
-					v0 = f*y0/z;
+					if(NumberOfPoints == 1 ){
+						u0 = u_center_data;
+						v0 = v_center_data;
+					} else {
+						u0 = f*x0/z;
+						v0 = f*y0/z;
+					}
 					u1 = f*x1/z;
 					v1 = f*y1/z;
 					u2 = f*x2/z;
@@ -540,13 +570,23 @@ void SamplePlugin::timer() {
 				auto Offset2InImageu = f*(-Offset2(0))/z;
 				auto Offset2InImagev = f*Offset2(1)/z;
 
-				Eigen::VectorXd dudv(6);
-				dudv(0) = Offset0InImageu - u0;
-				dudv(1) = Offset0InImagev - v0;
-				dudv(2) = Offset1InImageu - u1;
-				dudv(3) = Offset1InImagev - v1;
-				dudv(4) = Offset2InImageu - u2;
-				dudv(5) = Offset2InImagev - v2;
+				Eigen::VectorXd dudv(NumberOfPoints*2);
+				if(NumberOfPoints == 1){
+					dudv(0) =  - u0;
+					dudv(1) =  - v0;
+				}
+				if(NumberOfPoints >1){
+					dudv(0) = Offset0InImageu - u0;
+					dudv(1) = Offset0InImagev - v0;
+				}
+				if(NumberOfPoints >=2){
+					dudv(2) = Offset1InImageu - u1;
+					dudv(3) = Offset1InImagev - v1;
+				}
+				if(NumberOfPoints == 3){
+					dudv(4) = Offset2InImageu - u2;
+					dudv(5) = Offset2InImagev - v2;
+				}
 
 				circle(imflip, Point2f(offset_x+Offset0InImageu,offset_y+Offset0InImagev), 30, Scalar( 127, 0, 127), 2);
 				circle(imflip, Point2f(offset_x+u0,offset_y+v0), 7, Scalar( 127, 0, 127), 2);
@@ -564,16 +604,21 @@ void SamplePlugin::timer() {
 				auto Jimage1 = GenerateImageJ(u1,v1).e();
 				auto Jimage2 = GenerateImageJ(u2,v2).e();
 
-				Eigen::MatrixXd JCombined(6,6);
+				Eigen::MatrixXd JCombined(NumberOfPoints*2,6);
+				if(NumberOfPoints >= 1){
+					JCombined.row(0) << Jimage0.row(0);
+					JCombined.row(1) << Jimage0.row(1);
+				}
 
-				JCombined.row(0) << Jimage0.row(0);
-				JCombined.row(1) << Jimage0.row(1);
+				if(NumberOfPoints >= 2){
+					JCombined.row(2) << Jimage1.row(0);
+					JCombined.row(3) << Jimage1.row(1);
+				}
 
-				JCombined.row(2) << Jimage1.row(0);
-				JCombined.row(3) << Jimage1.row(1);
-
-				JCombined.row(4) << Jimage2.row(0);
-				JCombined.row(5) << Jimage2.row(1);
+				if(NumberOfPoints == 3){
+					JCombined.row(4) << Jimage2.row(0);
+					JCombined.row(5) << Jimage2.row(1);
+				}
 
 
 				// Eigen::MatrixXd U;

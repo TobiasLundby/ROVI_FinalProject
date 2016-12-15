@@ -23,7 +23,6 @@
 #include <rw/math/LinearAlgebra.hpp>
 
 
-
 class Pose{
 public:
 		double x;
@@ -48,23 +47,24 @@ Q_OBJECT
 Q_INTERFACES( rws::RobWorkStudioPlugin )
 public:
 
-  std::string marker_path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/markers/";
-	std::string background_path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/backgrounds/";
+	/* EDIT HERE */
+	std::string plugin_path = "/home/exchizz/SDU/Skole/7.Semester/ROVI/SamplePluginPA10/";
+	std::string log_path = "/home/exchizz/Dropbox/Mini-Project/Final_project/data/";
+	int NumberOfPoints = 3; //{1,2,3}
+  bool Testrun = false;
+	/* END EDIT HERE */
+
+  std::string marker_path = plugin_path + "markers/";
+	std::string background_path = plugin_path + "backgrounds/";
+	std::string sequence_path = plugin_path + "motions/";
 
 
-	//Robotics
 	SamplePlugin();
 	virtual ~SamplePlugin();
-
-	Q VelocityLimitReached(Q dq, float dt);
 	virtual void open(rw::models::WorkCell* workcell);
-
 	virtual void close();
-
 	virtual void initialize();
 
-	rw::math::VelocityScrew6D<double> calculateDeltaU(rw::math::Transform3D<double> baseTtool, rw::math::Transform3D<double> baseTtool_desired);
-	rw::math::Q algorithm1(const rw::models::Device::Ptr device, rw::kinematics::State state, const rw::kinematics::Frame* tool, const rw::math::Transform3D<double> baseTtool_desired, const rw::math::Q q_in);
 private slots:
 	void btnPressed();
 	void timer();
@@ -72,13 +72,10 @@ private slots:
 	void dropBackgroundchanged(QString val);
 	void dropMarkerChanged(QString value);
 	void sliderDt(int dt);
-
 	void stateChangedListener(const rw::kinematics::State& state);
 
 private:
 
-
-  Jacobian GenerateImageJ(float u, float v);
 	// Vision
 	SIFTDetector * siftdetector;
 	ColorDetector * marker1detector;
@@ -90,13 +87,18 @@ private:
 
 	std::vector<Q> q_log;
 	std::vector<rw::math::Transform3D<>> tool_log;
+	std::vector<Point2f> error_log;
 
 	// Robotics
 	bool firstrun = true;
 	static cv::Mat toOpenCVImage(const rw::sensor::Image& img);
 	int i = 0;
 	std::string currentMarker = "Markerpose";
+	std::string selectedSequence = "MarkerMotionSlow.txt";
+	Jacobian GenerateImageJ(float u, float v);
+	Q VelocityLimitReached(Q dq, float dt);
 
+	// Log
 	std::vector<Pose> motionVector;
 	QTimer* _timer;
 
